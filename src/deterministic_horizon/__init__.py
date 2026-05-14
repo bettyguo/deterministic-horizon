@@ -29,6 +29,15 @@ from deterministic_horizon.metrics import (
     estimate_horizon,
     fit_decoherence_model,
 )
+from deterministic_horizon.policy import (
+    DEFAULT_TOOL_ACCURACY,
+    MODEL_HORIZONS,
+    DelegationDecision,
+    delegation_decision,
+    expected_neural_accuracy,
+    horizon_for,
+    should_delegate,
+)
 from deterministic_horizon.tasks import (
     ArithmeticTask,
     BaseTask,
@@ -37,6 +46,7 @@ from deterministic_horizon.tasks import (
     generate_instances,
     load_task,
 )
+
 
 # Model interfaces are imported lazily so that the package can be imported
 # without the optional `openai`/`anthropic`/`torch` dependencies installed.
@@ -87,6 +97,14 @@ __all__ = [
     "bootstrap_ci",
     "compute_effect_size",
     "fit_decoherence_model",
+    # Practitioner decision helpers
+    "should_delegate",
+    "delegation_decision",
+    "expected_neural_accuracy",
+    "horizon_for",
+    "DelegationDecision",
+    "MODEL_HORIZONS",
+    "DEFAULT_TOOL_ACCURACY",
     # Re-exported lazily via __getattr__
     "BaseModel",
     "ModelResponse",

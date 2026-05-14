@@ -1,0 +1,12 @@
+{
+  "ignorePatterns": [
+    { "pattern": "^https://github.com/deterministic-horizon/" },
+    { "pattern": "^http://localhost" },
+    { "pattern": "^https://arxiv.org/abs/2601" }
+  ],
+  "timeout": "20s",
+  "retryOn429": true,
+  "retryCount": 3,
+  "fallbackRetryDelay": "30s",
+  "aliveStatusCodes": [200, 206, 999]
+}

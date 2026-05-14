@@ -1,27 +1,27 @@
 <div align="center">
 
-# 🧭 The Deterministic Horizon
+# The Deterministic Horizon
 
 **When extended chain-of-thought stops helping — and tool delegation becomes the only way forward.**
 
 [![Paper](https://img.shields.io/badge/paper-ICML%202026-b31b1b.svg)](paper/ICML2026_DeterministicHorizon_FINAL.pdf)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%E2%80%933.12-blue.svg)](https://www.python.org/downloads/)
-[![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](.github/workflows/ci.yml)
+[![CI](https://github.com/deterministic-horizon/deterministic-horizon/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 [![Code style: ruff](https://img.shields.io/badge/lint-ruff-46aef7.svg)](https://github.com/astral-sh/ruff)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/deterministic-horizon/deterministic-horizon/blob/main/notebooks/01_quickstart.ipynb)
 
 <img src="assets/figure_decay.png" alt="Accuracy decay vs reasoning depth" width="780"/>
 
-**TL;DR — Past ~20 steps of reasoning, every frontier LLM falls off a cliff. Tools don't.**
+**TL;DR — Past ~22 steps of reasoning, every frontier LLM falls off a cliff. Tools don't.**
 
 </div>
 
 ---
 
-## 🔥 The 30-second pitch
+## The 30-second pitch
 
-We tested **12 frontier models** on **state-space search** (the kind of problem BFS solves in milliseconds) — and they all collapse at the same wall:
+We tested **12 frontier models** on **state-space search** (the kind of problem BFS solves in milliseconds) — they all collapse at the same wall:
 
 |  | Neural CoT (C1) | **Tool delegation (C3)** |
 |---|---:|---:|
@@ -36,16 +36,43 @@ The wall is at **d\* ∈ [19, 31]** reasoning steps. We give the wall a name (th
 
 ---
 
-## ⏱️ 60-second offline demo (no API keys)
+## Five lines of code that ship to your agent today
+
+```python
+from deterministic_horizon import should_delegate
+
+# In your planner loop:
+if should_delegate(estimated_depth=subproblem_depth, model="claude-4.5-opus"):
+    answer = call_tool(subproblem)        # BFS / search / SQL / verifier
+else:
+    answer = call_llm(subproblem)         # neural chain-of-thought
+```
+
+Need the full justification (for logging or eval)?
+
+```python
+>>> from deterministic_horizon import delegation_decision
+>>> d = delegation_decision(estimated_depth=27, model="claude-4.5-opus")
+>>> d.explain()
+"At estimated depth d=27, model 'claude-4.5-opus' is expected to reach 31% via CoT
+ vs. 92% via tools (horizon d*=28). → delegate."
+```
+
+Per-model horizons, when this *doesn't* apply, and three production routing patterns: [docs/when-to-delegate.md](docs/when-to-delegate.md).
+
+---
+
+## 60-second offline demo (no API keys)
 
 ```bash
 git clone https://github.com/deterministic-horizon/deterministic-horizon
 cd deterministic-horizon
 pip install -e .
-python examples/demo.py
+python examples/demo.py            # offline horizon estimation
+python examples/agent_routing.py   # routing pattern, end-to-end
 ```
 
-You'll see the **horizon estimated live** from a synthetic decoherence simulator, decoherence-model fit R² ≈ 0.97, and a publication-grade figure saved to `analysis/figure_decay.png`. Matches the hero image above.
+You'll see the **horizon estimated live** from a synthetic decoherence simulator, decoherence-model fit R² ≈ 0.97, and a publication-grade figure saved to `analysis/figure_decay.png` (matches the hero image).
 
 Want the **real LLMs**? Add API keys to `.env` (see `.env.example`) and:
 
@@ -57,7 +84,7 @@ dh analyze  --results results/gpt4o.json --output analysis/gpt4o/
 
 ---
 
-## 🧪 Headline findings (replicating the paper)
+## Headline findings (replicating the paper)
 
 | Metric | Value | Why it matters |
 |---|---|---|
@@ -74,13 +101,16 @@ make paper-figures   # rebuilds every figure in the paper
 make paper-tables    # rebuilds every table
 ```
 
+See [docs/reproducing.md](docs/reproducing.md) for seeds, costs, and a wall-clock breakdown.
+
 ---
 
-## 🧬 What's inside
+## What's inside
 
 ```
 deterministic-horizon/
 ├── src/deterministic_horizon/
+│   ├── policy.py       # should_delegate / delegation_decision (THE engineering hook)
 │   ├── tasks/          # PermutationProbe, FSA-Sim, ArithChain (+ BFS oracles)
 │   ├── models/         # Uniform interface: OpenAI / Anthropic / DeepSeek / local
 │   ├── metrics/        # SSJ, SFE, super-exponential horizon fit, bootstrap CIs
@@ -88,21 +118,23 @@ deterministic-horizon/
 │   ├── runners.py      # High-level `evaluate(...)` Python API
 │   └── cli.py          # `dh generate | evaluate | analyze`
 ├── examples/
-│   └── demo.py         # ⚡ no-API-key reproduction of d*
+│   ├── demo.py            # Offline reproduction of d*
+│   └── agent_routing.py   # Production routing pattern using should_delegate
 ├── notebooks/
 │   └── 01_quickstart.ipynb   # 60-second Colab-friendly walkthrough
-├── data/sample/        # Pre-generated permutation instances
-├── results/sample/     # Pre-computed synthetic results
-├── configs/            # Hydra/OmegaConf configs (model × task × experiment)
-├── paper/              # ICML 2026 LaTeX + final PDF
-└── tests/              # pytest suite
+├── docs/                  # When-to-delegate · Theorem cheatsheet · FAQ · Reproducing
+├── data/sample/           # Pre-generated permutation instances
+├── results/sample/        # Pre-computed synthetic results
+├── configs/               # OmegaConf configs (model × task × experiment)
+├── paper/                 # ICML 2026 LaTeX + final PDF
+└── tests/                 # pytest suite (smoke / metrics / tasks / policy / analysis)
 ```
 
 ---
 
-## 🧠 Why this is different from "overthinking" papers
+## Why this is different from "overthinking" papers
 
-| | Simplicity Bias (Wu et al. 2025) | **Decoherence (this work)** |
+| | Simplicity Bias (prior work) | **Decoherence (this work)** |
 |---|---|---|
 | Cause | Training preference for short outputs | Information-theoretic capacity bound |
 | Fix | Fine-tune on long traces | **No fix** — it's architectural |
@@ -111,11 +143,11 @@ deterministic-horizon/
 | Predicted cross-model $r$ | Low | **High**  ← we observe 0.86 ✅ |
 | Enc-dec advantage | None | **2–3×** ← we observe 2.8× ✅ |
 
-Four divergent predictions, four wins. See §1 of the paper.
+Four divergent predictions, four wins. See §1 of the paper or [docs/theorem-cheatsheet.md](docs/theorem-cheatsheet.md).
 
 ---
 
-## 📐 The core theorem (in one line)
+## The core theorem (in one line)
 
 The number of distinct states a decoder-only transformer can reliably track is
 
@@ -128,16 +160,17 @@ yielding the closed-form Deterministic Horizon
 $$d^\star \;\approx\; \frac{1}{\gamma}\Bigl(\sqrt{2 L \ln(1/\alpha)} \;-\; \varepsilon_0\, L\Bigr)$$
 
 and the fine-tuning ceiling $\text{Acc}_{\text{fine-tune}} \leq \text{Acc}_{\text{baseline}} + O(d^\star/d)$.
-Proofs in the appendix; ablations in §6.
+Proofs in the appendix; ablations in §6. Plain-English version: [docs/theorem-cheatsheet.md](docs/theorem-cheatsheet.md).
 
 ---
 
-## 🛠️ Python API
+## Python API
 
 ```python
 from deterministic_horizon import (
     PermutationTask, generate_instances, evaluate,
     estimate_horizon, fit_decoherence_model,
+    should_delegate, delegation_decision,
 )
 
 # 1. Generate task instances
@@ -150,6 +183,9 @@ results = evaluate(model="gpt-4o", instances=instances, conditions=["C1", "C3"])
 # 3. Estimate the horizon
 horizon = estimate_horizon(results, threshold=0.5)
 print(f"d* = {horizon['d_star']:.1f}  (R² = {horizon['r_squared']:.3f})")
+
+# 4. Use it in your own agent's routing decision
+should_delegate(estimated_depth=horizon['d_star'] + 5, model="gpt-4o")  # → True
 ```
 
 ### Conditions
@@ -164,7 +200,7 @@ print(f"d* = {horizon['d_star']:.1f}  (R² = {horizon['r_squared']:.3f})")
 
 ---
 
-## 🔧 Installation
+## Installation
 
 ```bash
 # Slim install (core metrics + analysis, no LLM clients)
@@ -180,45 +216,35 @@ pip install -e ".[local]"
 pip install -e ".[all,dev]"
 ```
 
-Requires Python 3.10–3.12. Tested on Linux, macOS, and Windows.
+Requires Python 3.10–3.12. Tested on Linux, macOS, and Windows via [CI](.github/workflows/ci.yml).
 
 ---
 
-## ❓ FAQ
+## FAQ (highlights)
 
 <details>
 <summary><b>Is the demo cherry-picked?</b></summary>
 
-No. The demo uses a *synthetic* reasoner whose per-step error follows the exact context-dependent model from the paper (Theorem 1). It's a controlled illustration of the prediction — the cross-model empirical numbers in `results/paper/` come from real API calls (12 models × 5 conditions × 8 tasks × 500 instances × 3 seeds = 720,000 evaluations, $3,420 in API cost).
+No. The demo uses a *synthetic* reasoner whose per-step error follows the exact context-dependent model from the paper (Theorem 1). The cross-model empirical numbers in `results/paper/` come from real API calls — 12 models × 5 conditions × 8 tasks × 500 instances × 3 seeds = 720,000 evaluations, $3,420 in API cost.
 </details>
 
 <details>
 <summary><b>How is this different from "transformers can't do X" papers?</b></summary>
 
-Prior expressivity work (Merrill, Hahn, Peng et al.) proves what transformers *can't compute in principle*. We show what frontier models *can't reliably execute in practice*, give a closed-form bound on the wall, and prove fine-tuning can't move it. The Deterministic Horizon is a usable engineering quantity, not just an asymptotic.
+Prior expressivity work proves what transformers *cannot compute in principle*. We show what frontier models *cannot reliably execute in practice*, give a closed-form bound on the wall, and prove fine-tuning cannot move it. The Deterministic Horizon is a usable engineering quantity, not an asymptotic.
 </details>
 
 <details>
 <summary><b>Does this mean reasoning models are useless?</b></summary>
 
-Opposite — it tells you exactly *when* to use them and *when* to delegate. Past $d^*$, neural CoT is a coin flip; tools win by 50–70 percentage points. Many real workloads have depth < $d^*$ and benefit from extended reasoning. The point is to know the boundary.
+Opposite — it tells you exactly *when* to use them and *when* to delegate. Past $d^*$, neural CoT is a coin flip; tools win by 50–70 percentage points.
 </details>
 
-<details>
-<summary><b>I want to try this on my own task. Where do I start?</b></summary>
-
-Subclass `deterministic_horizon.tasks.BaseTask` — you need to implement five methods (`initial_state`, `apply_operator`, `state_equal`, `state_to_string`, `parse_state`) and you're done. See `tasks/permutation.py` for a 200-line reference implementation.
-</details>
-
-<details>
-<summary><b>Does this apply to Mixture-of-Experts / Mamba / RWKV?</b></summary>
-
-Theorem 1 is specific to decoder-only attention. State-space models (SSMs) share the $\text{TC}^0$ ceiling (Merrill 2024) but have a *different* capacity bound — we report preliminary results in Appendix D and welcome contributions extending the framework.
-</details>
+Full FAQ: [docs/faq.md](docs/faq.md).
 
 ---
 
-## 📚 Citation
+## Citation
 
 If you use this code or build on the ideas, please cite:
 
@@ -237,20 +263,27 @@ A `CITATION.cff` is included so GitHub will auto-populate the "Cite this reposit
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Bug reports, new tasks, and extensions are all welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md). Open issues are tagged `good-first-issue` for newcomers.
+Bug reports, new tasks, and extensions welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md); issue templates and a PR checklist are wired up via [`.github/`](.github/). Open issues tagged `good-first-issue` are great starting points.
 
-**Roadmap** (help wanted ⭐):
-- [ ] SWE-Bench-State integration  
-- [ ] WebArena-Nav adapter  
-- [ ] Mamba / RWKV decoherence study  
-- [ ] Interactive horizon visualizer (web)  
+**Roadmap** (help wanted):
+
+- [ ] SWE-Bench-State integration
+- [ ] WebArena-Nav adapter
+- [ ] Mamba / RWKV decoherence study
+- [ ] Interactive horizon visualiser (web)
 - [ ] Hugging Face Spaces demo
 
 ---
 
-## 🙏 Acknowledgments
+## Star history
+
+[![Star History Chart](https://api.star-history.com/svg?repos=deterministic-horizon/deterministic-horizon&type=Date)](https://star-history.com/#deterministic-horizon/deterministic-horizon&Date)
+
+---
+
+## Acknowledgments
 
 We thank the ICML reviewers and discussants. The fine-tuning experiments used compute provided by an anonymous donor; the open-weight model evaluations used Together AI credits.
 
@@ -258,9 +291,9 @@ We thank the ICML reviewers and discussants. The fine-tuning experiments used co
 
 <div align="center">
 
-**Found this useful?** ⭐ Star the repo and share with anyone shipping agentic systems.
+**Found this useful?** Star the repo and share with anyone shipping agentic systems.
 The Deterministic Horizon isn't a soft suggestion — it's a wall.
 
-[Paper](paper/ICML2026_DeterministicHorizon_FINAL.pdf) · [Quickstart Notebook](notebooks/01_quickstart.ipynb) · [Issues](https://github.com/deterministic-horizon/deterministic-horizon/issues)
+[Paper](paper/ICML2026_DeterministicHorizon_FINAL.pdf) · [Docs](docs/README.md) · [When to delegate](docs/when-to-delegate.md) · [Quickstart notebook](notebooks/01_quickstart.ipynb) · [Issues](https://github.com/deterministic-horizon/deterministic-horizon/issues)
 
 </div>

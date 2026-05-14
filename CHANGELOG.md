@@ -17,10 +17,19 @@ Horizon: When Extended Reasoning Fails and Tool Delegation Becomes Necessary"*.
 - Super-exponential decay fit (Theorem 1) and bootstrap CI for the Deterministic Horizon $d^*$
 - Cross-model correlation analysis
 - `dh` CLI (`generate`, `evaluate`, `analyze`, `train`)
+- **Practitioner decision helpers** — `should_delegate()`, `delegation_decision()`,
+  `expected_neural_accuracy()`, `horizon_for()` — turn Theorem 1 into a single-line
+  branch you can paste into an agent's planner loop
 - Offline demo (`examples/demo.py`) — no API keys required, ~10 seconds runtime
+- Production-pattern example (`examples/agent_routing.py`) — end-to-end agent
+  routing using `should_delegate`, no API keys required
 - Quickstart notebook (`notebooks/01_quickstart.ipynb`)
 - Pre-generated sample instances + sample results for one-click reproduction
+- Documentation under `docs/`: when-to-delegate, theorem cheat-sheet,
+  architecture overview, reproducing guide, FAQ
 - Continuous integration (GitHub Actions) on Linux + macOS + Windows
+  with lint + tests + wheel build
+- Issue / PR templates, Code of Conduct, Dependabot, and link-check workflow
 - Optional dependency groups: `[openai]`, `[anthropic]`, `[local]`, `[viz]`, `[dev]`, `[all]`
 
 ### Reproducibility

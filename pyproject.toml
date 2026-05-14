@@ -80,7 +80,9 @@ dh = "deterministic_horizon.cli:main"
 Homepage = "https://github.com/deterministic-horizon/deterministic-horizon"
 Repository = "https://github.com/deterministic-horizon/deterministic-horizon"
 Issues = "https://github.com/deterministic-horizon/deterministic-horizon/issues"
-Paper = "https://arxiv.org/abs/2601.xxxxx"
+Paper = "https://github.com/deterministic-horizon/deterministic-horizon/blob/main/paper/ICML2026_DeterministicHorizon_FINAL.pdf"
+Documentation = "https://github.com/deterministic-horizon/deterministic-horizon/blob/main/docs/README.md"
+Changelog = "https://github.com/deterministic-horizon/deterministic-horizon/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest a new task, model adapter, metric, or extension.
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of extension?
+      options:
+        - New task (with operator semantics + BFS oracle)
+        - New model adapter (Gemini, Mistral, Reka, …)
+        - New metric or analysis
+        - Architecture study (Mamba / RWKV / MoE)
+        - Real-world adapter (SWE-Bench-State, WebArena-Nav, …)
+        - Visualisation / demo
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What problem does this solve? What would you use it for?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Sketch of the API or behaviour. Pseudocode welcome.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
