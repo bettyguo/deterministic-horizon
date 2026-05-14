@@ -257,8 +257,52 @@ def train(
     output_dir: Path = typer.Option("checkpoints/", help="Output directory"),
 ) -> None:
     """Fine-tune a model on optimal-length traces (C5 condition)."""
-    console.print("[bold blue]Fine-tuning not yet implemented in CLI[/]")
-    console.print("Use the Python API: deterministic_horizon.training.finetune()")
+    from deterministic_horizon.training.finetune import run_finetuning, FinetuneConfig
+    
+    console.print(f"[bold blue]Loading config from {config}...[/]")
+    
+    # Check if config file exists
+    if not config.exists():
+        console.print(f"[red]Config file not found: {config}[/]")
+        console.print("Create a config file or specify a valid path with --config")
+        raise typer.Exit(1)
+    
+    try:
+        # Load config
+        dh_config = load_config(config)
+        
+        # Create finetune config from the loaded config
+        finetune_config = FinetuneConfig(
+            model_name=dh_config.model.name if dh_config.model.name else "meta-llama/Llama-3.3-8B-Instruct",
+            output_dir=str(output_dir),
+            seed=dh_config.experiment.seeds[0] if dh_config.experiment.seeds else 42,
+        )
+        
+        # Create output directory
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        console.print(f"[bold blue]Starting fine-tuning with model {finetune_config.model_name}...[/]")
+        
+        with Progress(console=console) as progress:
+            task = progress.add_task("Fine-tuning...", total=None)
+            
+            # Run fine-tuning
+            results = run_finetuning(config=finetune_config)
+            
+            progress.advance(task)
+        
+        # Save metrics
+        metrics_path = output_dir / "train_metrics.json"
+        with open(metrics_path, "w") as f:
+            json.dump(results, f, indent=2, default=str)
+        
+        console.print(f"[green]✓ Fine-tuning complete![/]")
+        console.print(f"[green]✓ Checkpoint saved to {output_dir}[/]")
+        console.print(f"[green]✓ Metrics saved to {metrics_path}[/]")
+        
+    except Exception as e:
+        console.print(f"[red]Fine-tuning failed: {e}[/]")
+        raise typer.Exit(1)
 
 
 @app.command()
