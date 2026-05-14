@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(& \"$PWD\\\\scripts\\\\seed_issues.ps1\")"
+    ]
+  }
+}
