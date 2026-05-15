@@ -255,10 +255,119 @@ def analyze(
 def train(
     config: Path = typer.Option("configs/finetune.yaml", help="Config file"),
     output_dir: Path = typer.Option("checkpoints/", help="Output directory"),
+    train_file: Path = typer.Option(None, help="Path to training data JSON"),
+    val_file: Path = typer.Option(None, help="Path to validation data JSON"),
+    model_name: str = typer.Option(None, help="Model name (overrides config)"),
+    num_epochs: int = typer.Option(None, help="Number of epochs (overrides config)"),
+    dry_run: bool = typer.Option(False, help="Validate config without training"),
 ) -> None:
     """Fine-tune a model on optimal-length traces (C5 condition)."""
-    console.print("[bold blue]Fine-tuning not yet implemented in CLI[/]")
-    console.print("Use the Python API: deterministic_horizon.training.finetune()")
+    from deterministic_horizon.training.finetune import (
+        FinetuneConfig,
+        run_finetuning,
+    )
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load base config (training-specific YAML or default)
+    finetune_cfg = FinetuneConfig(output_dir=str(output_dir))
+
+    if config.exists():
+        try:
+            import yaml
+            with open(config) as f:
+                cfg_data = yaml.safe_load(f)
+
+            if cfg_data:
+                ft_section = cfg_data.get("finetune", cfg_data)
+                for key, value in ft_section.items():
+                    if hasattr(finetune_cfg, key):
+                        setattr(finetune_cfg, key, value)
+        except Exception as e:
+            console.print(f"[red]Error loading config {config}: {e}[/]")
+            raise typer.Exit(1)
+    else:
+        console.print(f"[yellow]Config {config} not found, using defaults[/]")
+
+    # CLI overrides
+    if model_name:
+        finetune_cfg.model_name = model_name
+    if num_epochs is not None:
+        finetune_cfg.num_epochs = num_epochs
+    if train_file:
+        finetune_cfg.train_file = str(train_file)
+    if val_file:
+        finetune_cfg.val_file = str(val_file)
+
+    # Validate data files exist
+    train_path = Path(finetune_cfg.train_file)
+    val_path = Path(finetune_cfg.val_file)
+
+    if not train_path.exists():
+        console.print(f"[red]Training data not found: {train_path}[/]")
+        console.print("[yellow]Generate data first: dh generate --task permutation --output[/]")
+        raise typer.Exit(1)
+
+    if not val_path.exists():
+        console.print(f"[red]Validation data not found: {val_path}[/]")
+        console.print("[yellow]Generate data first or specify --val-file[/]")
+        raise typer.Exit(1)
+
+    console.print(f"[bold blue]Fine-tuning Configuration[/]")
+    console.print(f"  Model: {finetune_cfg.model_name}")
+    console.print(f"  Output: {finetune_cfg.output_dir}")
+    console.print(f"  Train data: {train_path} ({finetune_cfg.num_train_samples} samples)")
+    console.print(f"  Val data: {val_path} ({finetune_cfg.num_val_samples} samples)")
+    console.print(f"  LoRA: r={finetune_cfg.lora_r}, alpha={finetune_cfg.lora_alpha}")
+    console.print(f"  Epochs: {finetune_cfg.num_epochs}, LR: {finetune_cfg.learning_rate}")
+
+    if dry_run:
+        console.print("[green]✓ Config validated (dry-run)[/]")
+        return
+
+    try:
+        console.print("[bold blue]Starting fine-tuning...[/]")
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            progress.add_task("Training in progress...", total=None)
+            results = run_finetuning(
+                config=finetune_cfg,
+                train_file=train_path,
+                val_file=val_path,
+            )
+
+        # Write train_metrics.json
+        metrics_path = output_dir / "train_metrics.json"
+        metrics = {
+            "model": finetune_cfg.model_name,
+            "num_epochs": finetune_cfg.num_epochs,
+            "learning_rate": finetune_cfg.learning_rate,
+            "batch_size": finetune_cfg.batch_size,
+            "train_loss": results.get("metrics", {}).get("train_loss"),
+            "train_runtime_s": results.get("metrics", {}).get("train_runtime"),
+            "train_samples": results.get("num_train_samples"),
+            "val_samples": results.get("num_val_samples"),
+            "output_dir": str(output_dir),
+        }
+        with open(metrics_path, "w") as f:
+            json.dump(metrics, f, indent=2, default=float)
+
+        console.print(f"[green]✓ Training complete[/]")
+        console.print(f"[green]✓ Checkpoint saved to {output_dir}[/]")
+        console.print(f"[green]✓ Metrics saved to {metrics_path}[/]")
+
+    except ImportError as e:
+        console.print(f"[red]Missing dependency: {e}[/]")
+        console.print("[yellow]Install with: pip install transformers torch peft[/]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Training failed: {e}[/]")
+        raise typer.Exit(1)
 
 
 @app.command()

@@ -1,0 +1,21 @@
+# Fine-tuning configuration for C5 condition (optimal-length trace training)
+finetune:
+  model_name: "meta-llama/Llama-3.3-8B-Instruct"
+  output_dir: "outputs/finetune"
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  num_epochs: 3
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 2e-5
+  warmup_ratio: 0.03
+  max_seq_length: 2048
+  train_file: "data/finetune_train.json"
+  val_file: "data/finetune_val.json"
+  num_train_samples: 5000
+  num_val_samples: 500
+  seed: 42
+  fp16: true
+  bf16: false
+  gradient_checkpointing: true
