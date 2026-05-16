@@ -257,8 +257,52 @@ def train(
     output_dir: Path = typer.Option("checkpoints/", help="Output directory"),
 ) -> None:
     """Fine-tune a model on optimal-length traces (C5 condition)."""
-    console.print("[bold blue]Fine-tuning not yet implemented in CLI[/]")
-    console.print("Use the Python API: deterministic_horizon.training.finetune()")
+    from deterministic_horizon.training.finetune import (
+        FinetuneConfig,
+        run_finetuning,
+    )
+
+    if not config.exists():
+        console.print(f"[red]Config file not found: {config}[/]")
+        raise typer.Exit(1)
+
+    try:
+        # Load the top-level experiment config (model, task, experiment)
+        exp_config = load_config(str(config))
+    except Exception as e:
+        console.print(f"[red]Failed to load config: {e}[/]")
+        raise typer.Exit(1)
+
+    # Build FinetuneConfig from the loaded config + CLI overrides
+    ft_config = FinetuneConfig(
+        model_name=exp_config.model.name or "meta-llama/Llama-3.3-8B-Instruct",
+        output_dir=str(output_dir),
+        seed=exp_config.random_seed,
+    )
+
+    console.print(f"[bold blue]Fine-tuning {ft_config.model_name}...[/]")
+    console.print(f"[dim]Config: {config}[/]")
+    console.print(f"[dim]Output: {output_dir}[/]")
+
+    try:
+        results = run_finetuning(config=ft_config)
+    except ImportError as e:
+        console.print(f"[red]Missing dependency: {e}[/]")
+        console.print("[yellow]Run: pip install deterministic-horizon[local][/]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Fine-tuning failed: {e}[/]")
+        raise typer.Exit(1)
+
+    # Write train_metrics.json
+    metrics_path = output_dir / "train_metrics.json"
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(metrics_path, "w") as f:
+        json.dump(results, f, indent=2)
+
+    console.print(f"[green]✓ Fine-tuning complete[/]")
+    console.print(f"[green]✓ Checkpoint: {output_dir}[/]")
+    console.print(f"[green]✓ Metrics: {metrics_path}[/]")
 
 
 @app.command()
