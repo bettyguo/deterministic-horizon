@@ -1,0 +1,30 @@
+# Fine-tuning Configuration
+# ========================
+# Usage: dh train --config configs/finetune.yaml --instances data/instances.json
+#
+# This config controls the C5 (fine-tuning) experiment:
+#   - Model: which model to fine-tune
+#   - Task: task configuration for instance generation
+#   - Experiment: experiment-level settings
+
+defaults:
+  - _self_
+  - model: gpt-4o
+  - task: permutation
+
+model:
+  name: meta-llama/Llama-3.3-8B-Instruct
+  provider: huggingface
+
+task:
+  name: permutation
+  n_elements: 8
+
+experiment:
+  name: c5_finetune
+  description: "Fine-tune on optimal-length CoT traces (C5 condition)"
+  n_instances: 1000
+  conditions: ["C5"]
+  batch_size: 50
+
+random_seed: 42

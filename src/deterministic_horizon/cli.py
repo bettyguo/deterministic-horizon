@@ -255,15 +255,31 @@ def analyze(
 def train(
     config: Path = typer.Option("configs/finetune.yaml", help="Config file"),
     output_dir: Path = typer.Option("checkpoints/", help="Output directory"),
+    instances: Optional[Path] = typer.Option(
+        None, help="Path to generated instances JSON (prepares dataset before training)"
+    ),
+    prepare_only: bool = typer.Option(
+        False, help="Only prepare the training dataset, do not run training"
+    ),
 ) -> None:
-    """Fine-tune a model on optimal-length traces (C5 condition)."""
+    """Fine-tune a model on optimal-length traces (C5 condition).
+
+    Example workflow:
+      1. dh generate --output data/instances.json
+      2. dh train --instances data/instances.json --config configs/finetune.yaml
+
+    Or prepare the dataset without training:
+      dh train --instances data/instances.json --prepare-only
+    """
     from deterministic_horizon.training.finetune import (
         FinetuneConfig,
+        prepare_finetune_dataset,
         run_finetuning,
     )
 
     if not config.exists():
         console.print(f"[red]Config file not found: {config}[/]")
+        console.print("[yellow]Create a config file or use one of the templates in configs/[/]")
         raise typer.Exit(1)
 
     try:
@@ -280,6 +296,43 @@ def train(
         seed=exp_config.random_seed,
     )
 
+    # --- Data preparation step ---
+    if instances is not None:
+        console.print(f"[bold blue]Preparing training dataset from {instances}...[/]")
+        if not instances.exists():
+            console.print(f"[red]Instances file not found: {instances}[/]")
+            console.print(
+                "[yellow]Generate instances first: dh generate --output <file>[/]"
+            )
+            raise typer.Exit(1)
+
+        try:
+            train_path = Path(output_dir) / "train.json"
+            val_path = Path(output_dir) / "val.json"
+            n_train, n_val = prepare_finetune_dataset(
+                instances_file=instances,
+                output_train=train_path,
+                output_val=val_path,
+                num_train=ft_config.num_train_samples,
+                num_val=ft_config.num_val_samples,
+                seed=ft_config.seed,
+            )
+            console.print(f"[green]✓ Prepared {n_train} train + {n_val} validation samples[/]")
+            console.print(f"[dim]  Train: {train_path}[/]")
+            console.print(f"[dim]  Val:   {val_path}[/]")
+
+            # Point FinetuneConfig to the prepared data
+            ft_config.train_file = str(train_path)
+            ft_config.val_file = str(val_path)
+        except Exception as e:
+            console.print(f"[red]Data preparation failed: {e}[/]")
+            raise typer.Exit(1)
+
+        if prepare_only:
+            console.print("[green]✓ Data preparation complete (--prepare-only)[/]")
+            return
+
+    # --- Training step ---
     console.print(f"[bold blue]Fine-tuning {ft_config.model_name}...[/]")
     console.print(f"[dim]Config: {config}[/]")
     console.print(f"[dim]Output: {output_dir}[/]")
@@ -289,6 +342,10 @@ def train(
     except ImportError as e:
         console.print(f"[red]Missing dependency: {e}[/]")
         console.print("[yellow]Run: pip install deterministic-horizon[local][/]")
+        raise typer.Exit(1)
+    except FileNotFoundError as e:
+        console.print(f"[red]Training data not found: {e}[/]")
+        console.print("[yellow]Pass --instances to prepare the dataset before training[/]")
         raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Fine-tuning failed: {e}[/]")
