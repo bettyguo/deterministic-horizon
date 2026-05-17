@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+import yaml
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -19,6 +20,7 @@ from deterministic_horizon.metrics import (
     compute_ssj,
     compute_sfe,
 )
+from deterministic_horizon.training.finetune import FinetuneConfig, run_finetuning
 
 app = typer.Typer(
     name="deterministic-horizon",
@@ -257,8 +259,79 @@ def train(
     output_dir: Path = typer.Option("checkpoints/", help="Output directory"),
 ) -> None:
     """Fine-tune a model on optimal-length traces (C5 condition)."""
-    console.print("[bold blue]Fine-tuning not yet implemented in CLI[/]")
-    console.print("Use the Python API: deterministic_horizon.training.finetune()")
+    console.print(f"[bold blue]Loading config from {config}...[/]")
+
+    if not config.exists():
+        console.print(f"[red]Config file not found: {config}[/]")
+        raise typer.Exit(1)
+
+    # Load YAML config
+    with open(config) as f:
+        cfg_dict = yaml.safe_load(f)
+
+    # Build FinetuneConfig
+    cfg = FinetuneConfig(
+        model_name=cfg_dict.get("model_name", "meta-llama/Llama-3.3-8B-Instruct"),
+        output_dir=str(output_dir),
+        lora_r=cfg_dict.get("lora_r", 16),
+        lora_alpha=cfg_dict.get("lora_alpha", 32),
+        lora_dropout=cfg_dict.get("lora_dropout", 0.05),
+        lora_target_modules=cfg_dict.get(
+            "lora_target_modules",
+            ["q_proj", "k_proj", "v_proj", "o_proj"],
+        ),
+        num_epochs=cfg_dict.get("num_epochs", 3),
+        batch_size=cfg_dict.get("batch_size", 4),
+        gradient_accumulation_steps=cfg_dict.get("gradient_accumulation_steps", 4),
+        learning_rate=cfg_dict.get("learning_rate", 2e-5),
+        warmup_ratio=cfg_dict.get("warmup_ratio", 0.03),
+        max_seq_length=cfg_dict.get("max_seq_length", 2048),
+        weight_decay=cfg_dict.get("weight_decay", 0.01),
+        train_file=cfg_dict.get("train_file", "data/finetune_train.json"),
+        val_file=cfg_dict.get("val_file", "data/finetune_val.json"),
+        num_train_samples=cfg_dict.get("num_train_samples", 5000),
+        num_val_samples=cfg_dict.get("num_val_samples", 500),
+        seed=cfg_dict.get("seed", 42),
+        fp16=cfg_dict.get("fp16", True),
+        bf16=cfg_dict.get("bf16", False),
+        gradient_checkpointing=cfg_dict.get("gradient_checkpointing", True),
+    )
+
+    console.print(f"[bold blue]Running fine-tuning: {cfg.model_name}[/]")
+    console.print(f"  Output directory: {output_dir}")
+    console.print(f"  LoRA rank: {cfg.lora_r}")
+    console.print(f"  Epochs: {cfg.num_epochs}")
+    console.print(f"  Batch size: {cfg.batch_size}")
+
+    with Progress(console=console) as progress:
+        task = progress.add_task("Fine-tuning...", total=None)
+
+        try:
+            train_path = Path(cfg.train_file)
+            val_path = Path(cfg.val_file)
+
+            results = run_finetuning(
+                config=cfg,
+                train_file=train_path,
+                val_file=val_path,
+            )
+
+            progress.update(task, completed=True)
+        except Exception as e:
+            progress.update(task, completed=True)
+            console.print(f"[red]Fine-tuning failed: {e}[/]")
+            raise typer.Exit(1)
+
+    console.print(f"[green]✓ Fine-tuning complete[/]")
+    console.print(f"  Train loss: {results['metrics']['train_loss']:.4f}")
+    console.print(f"  Output: {results['output_dir']}")
+
+    # Save train metrics
+    output_dir.mkdir(parents=True, exist_ok=True)
+    metrics_path = output_dir / "train_metrics.json"
+    with open(metrics_path, "w") as f:
+        json.dump(results["metrics"], f, indent=2)
+    console.print(f"[green]✓ Saved train metrics to {metrics_path}[/]")
 
 
 @app.command()
