@@ -13,6 +13,8 @@ from rich.table import Table
 from deterministic_horizon.config import load_config, save_config, Config
 from deterministic_horizon.tasks import generate_instances, load_task, TASK_REGISTRY
 from deterministic_horizon.models import load_model, MODEL_REGISTRY
+from deterministic_horizon.training.finetune import FinetuneConfig, run_finetuning
+from deterministic_horizon.training import prepare_finetune_dataset
 from deterministic_horizon.metrics import (
     accuracy_by_depth,
     estimate_horizon,
@@ -253,12 +255,52 @@ def analyze(
 
 @app.command()
 def train(
-    config: Path = typer.Option("configs/finetune.yaml", help="Config file"),
+    config: Path = typer.Option("configs/finetune.yaml", help="Config file for fine-tuning"),
     output_dir: Path = typer.Option("checkpoints/", help="Output directory"),
+    train_file: Optional[Path] = typer.Option(None, help="Training data file (overrides config)"),
+    val_file: Optional[Path] = typer.Option(None, help="Validation data file (overrides config)"),
 ) -> None:
     """Fine-tune a model on optimal-length traces (C5 condition)."""
-    console.print("[bold blue]Fine-tuning not yet implemented in CLI[/]")
-    console.print("Use the Python API: deterministic_horizon.training.finetune()")
+    console.print(f"[bold blue]Starting fine-tuning with config: {config}[/]")
+
+    # Build FinetuneConfig from YAML if it exists, otherwise use defaults
+    try:
+        finetune_config = FinetuneConfig()
+        if config.exists():
+            # Merge overrides from the YAML config
+            import yaml
+            with open(config) as f:
+                yaml_data = yaml.safe_load(f) or {}
+            for key, value in yaml_data.items():
+                if hasattr(finetune_config, key):
+                    setattr(finetune_config, key, value)
+            console.print(f"[green]Loaded config from {config}[/]")
+        else:
+            console.print(f"[yellow]Config {config} not found, using defaults[/]")
+
+        finetune_config.output_dir = str(output_dir)
+
+        # Run fine-tuning
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            progress.add_task("Fine-tuning...", total=None)
+            results = run_finetuning(
+                config=finetune_config,
+                train_file=train_file,
+                val_file=val_file,
+            )
+
+        console.print(f"[green]✓ Fine-tuning complete[/]")
+        console.print(f"  Train loss: {results['metrics']['train_loss']:.4f}")
+        console.print(f"  Runtime: {results['metrics']['train_runtime']:.1f}s")
+        console.print(f"  Output: {finetune_config.output_dir}")
+
+    except Exception as e:
+        console.print(f"[red]Fine-tuning failed: {e}[/]")
+        raise typer.Exit(1)
 
 
 @app.command()
