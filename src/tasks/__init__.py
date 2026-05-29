@@ -1,9 +1,9 @@
 """Task implementations for state-space search problems."""
 
-from deterministic_horizon.tasks.base import BaseTask, TaskInstance, TaskResult
-from deterministic_horizon.tasks.permutation import PermutationTask
-from deterministic_horizon.tasks.fsa import FSATask
 from deterministic_horizon.tasks.arithmetic import ArithmeticTask
+from deterministic_horizon.tasks.base import BaseTask, TaskInstance, TaskResult
+from deterministic_horizon.tasks.fsa import FSATask
+from deterministic_horizon.tasks.permutation import PermutationTask
 
 # Task registry
 TASK_REGISTRY: dict[str, type[BaseTask]] = {

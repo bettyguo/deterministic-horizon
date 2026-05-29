@@ -1,4 +1,5 @@
 """Smoke tests — these must pass before *anything* else is allowed to fail."""
+
 from __future__ import annotations
 
 

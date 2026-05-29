@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+title: "The Deterministic Horizon: When Extended Reasoning Fails and Tool Delegation Becomes Necessary"
+message: "If you use this software or the accompanying paper, please cite it as below."
+type: software
+authors:
+  - family-names: Guo
+    given-names: Dongxin
+  - family-names: Wu
+    given-names: Jikun
+  - family-names: Yiu
+    given-names: Siu Ming
+repository-code: "https://github.com/bettyguo/deterministic-horizon"
+url: "https://github.com/bettyguo/deterministic-horizon"
+license: MIT
+version: 1.0.1
+keywords:
+  - chain-of-thought
+  - reasoning
+  - tool-use
+  - transformer
+  - state-tracking
+  - inference-time-compute
+  - llm-evaluation
+  - agentic-reasoning
+preferred-citation:
+  type: conference-paper
+  title: "The Deterministic Horizon: When Extended Reasoning Fails and Tool Delegation Becomes Necessary"
+  authors:
+    - family-names: Guo
+      given-names: Dongxin
+    - family-names: Wu
+      given-names: Jikun
+    - family-names: Yiu
+      given-names: Siu Ming
+  collection-title: "Proceedings of the 43rd International Conference on Machine Learning (ICML)"
+  year: 2026

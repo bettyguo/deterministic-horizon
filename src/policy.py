@@ -74,9 +74,7 @@ def _l_eff_for(eps0: float, d_star: float, alpha: float = ALPHA_DEFAULT) -> floa
     """
     denom = math.log(1.0 / alpha) - eps0 * d_star
     if denom <= 0:
-        raise ValueError(
-            f"ε₀·d* must be below ln(1/α); got ε₀={eps0}, d*={d_star}, α={alpha}"
-        )
+        raise ValueError(f"ε₀·d* must be below ln(1/α); got ε₀={eps0}, d*={d_star}, α={alpha}")
     return GAMMA * d_star * (d_star + 1.0) / (2.0 * denom)
 
 
@@ -94,18 +92,18 @@ def _l_eff_for(eps0: float, d_star: float, alpha: float = ALPHA_DEFAULT) -> floa
 
 _MODEL_EPS0_DSTAR: dict[str, tuple[float, float]] = {
     # General-purpose (closed) ------------------------------------------------
-    "gpt-4o":          (0.020, 22.0),   # paper canonical: ε₀=0.02, L_eff=150, d*≈22.3
+    "gpt-4o": (0.020, 22.0),  # paper canonical: ε₀=0.02, L_eff=150, d*≈22.3
     "claude-4.5-opus": (0.018, 27.0),
     # Reasoning-specialised ---------------------------------------------------
-    "o3-mini":         (0.014, 31.0),   # highest horizon in the suite
-    "deepseek-r1":     (0.015, 29.0),
+    "o3-mini": (0.014, 31.0),  # highest horizon in the suite
+    "deepseek-r1": (0.015, 29.0),
     # Open-weight (published H, d_h — used for the √(d_h·H) scaling check) -----
-    "llama-3.1-8b":    (0.022, 20.0),
-    "llama-3.3-70b":   (0.018, 28.0),
-    "qwen-2.5-7b":     (0.023, 19.0),
-    "qwen-2.5-72b":    (0.018, 28.0),
+    "llama-3.1-8b": (0.022, 20.0),
+    "llama-3.3-70b": (0.018, 28.0),
+    "qwen-2.5-7b": (0.023, 19.0),
+    "qwen-2.5-72b": (0.018, 28.0),
     # Cross-model fallback ("average frontier model", midpoint of [19, 31]) ---
-    "default":         (0.020, 24.0),
+    "default": (0.020, 24.0),
 }
 
 MODEL_HORIZONS: dict[str, dict[str, float]] = {

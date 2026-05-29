@@ -10,10 +10,11 @@ results instead of writing JSON to disk.
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
 
 from deterministic_horizon.tasks import load_task
-from deterministic_horizon.tasks.base import TaskInstance, TaskResult
+from deterministic_horizon.tasks.base import TaskInstance
 
 log = logging.getLogger(__name__)
 
