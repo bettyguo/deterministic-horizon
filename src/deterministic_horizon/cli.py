@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+import yaml
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
@@ -255,10 +256,123 @@ def analyze(
 def train(
     config: Path = typer.Option("configs/finetune.yaml", help="Config file"),
     output_dir: Path = typer.Option("checkpoints/", help="Output directory"),
+    prepare_data: bool = typer.Option(
+        False, "--prepare-data", help="Prepare dataset from generated instances before training"
+    ),
+    instances: Optional[Path] = typer.Option(
+        None, "--instances", help="Path to generated instances JSON (required with --prepare-data)"
+    ),
 ) -> None:
-    """Fine-tune a model on optimal-length traces (C5 condition)."""
-    console.print("[bold blue]Fine-tuning not yet implemented in CLI[/]")
-    console.print("Use the Python API: deterministic_horizon.training.finetune()")
+    """Fine-tune a model on optimal-length traces (C5 condition).
+
+    Loads a YAML configuration, runs LoRA fine-tuning on the C5 condition
+    dataset, and saves the trained checkpoint plus metrics.
+    """
+    # Validate config path
+    config_path = Path(config)
+    if not config_path.exists():
+        console.print(f"[red]Error: Config file not found: {config_path}[/]")
+        console.print("Create one from the template at configs/finetune.yaml")
+        raise typer.Exit(1)
+
+    # Load YAML config into FinetuneConfig
+    console.print(f"[bold blue]Loading config from {config_path}...[/]")
+    with open(config_path) as f:
+        raw_config = yaml.safe_load(f) or {}
+
+    from deterministic_horizon.training.finetune import FinetuneConfig, run_finetuning
+
+    ft_config = FinetuneConfig(
+        model_name=raw_config.get("model_name", "meta-llama/Llama-3.3-8B-Instruct"),
+        output_dir=str(output_dir),
+        lora_r=raw_config.get("lora_r", 16),
+        lora_alpha=raw_config.get("lora_alpha", 32),
+        lora_dropout=raw_config.get("lora_dropout", 0.05),
+        lora_target_modules=raw_config.get(
+            "lora_target_modules",
+            ["q_proj", "k_proj", "v_proj", "o_proj"],
+        ),
+        num_epochs=raw_config.get("num_epochs", 3),
+        batch_size=raw_config.get("batch_size", 4),
+        gradient_accumulation_steps=raw_config.get("gradient_accumulation_steps", 4),
+        learning_rate=raw_config.get("learning_rate", 2e-5),
+        warmup_ratio=raw_config.get("warmup_ratio", 0.03),
+        max_seq_length=raw_config.get("max_seq_length", 2048),
+        weight_decay=raw_config.get("weight_decay", 0.01),
+        train_file=raw_config.get("train_file", "data/finetune_train.json"),
+        val_file=raw_config.get("val_file", "data/finetune_val.json"),
+        num_train_samples=raw_config.get("num_train_samples", 5000),
+        num_val_samples=raw_config.get("num_val_samples", 500),
+        seed=raw_config.get("seed", 42),
+        fp16=raw_config.get("fp16", True),
+        bf16=raw_config.get("bf16", False),
+        gradient_checkpointing=raw_config.get("gradient_checkpointing", True),
+    )
+
+    # Optionally prepare dataset
+    if prepare_data:
+        if instances is None:
+            console.print(
+                "[red]Error: --instances is required when --prepare-data is set[/]"
+            )
+            raise typer.Exit(1)
+        instances_path = Path(instances)
+        if not instances_path.exists():
+            console.print(f"[red]Error: Instances file not found: {instances_path}[/]")
+            raise typer.Exit(1)
+
+        console.print("[bold blue]Preparing fine-tuning dataset...[/]")
+        from deterministic_horizon.training.finetune import prepare_finetune_dataset
+
+        train_file = Path(ft_config.train_file)
+        val_file = Path(ft_config.val_file)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            progress.add_task("Generating dataset...", total=None)
+            n_train, n_val = prepare_finetune_dataset(
+                instances_file=instances_path,
+                output_train=train_file,
+                output_val=val_file,
+                num_train=ft_config.num_train_samples,
+                num_val=ft_config.num_val_samples,
+                seed=ft_config.seed,
+            )
+        console.print(
+            f"[green]✓ Prepared {n_train} training + {n_val} validation samples[/]"
+        )
+
+    # Run fine-tuning
+    console.print(
+        f"[bold blue]Starting fine-tuning on {ft_config.model_name}...[/]"
+    )
+    console.print(
+        f"  Output directory: {output_dir.resolve()}"
+    )
+
+    # Note: run_finetuning internally handles training progress via HF Trainer
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+        transient=True,
+    ) as progress:
+        progress.add_task("Fine-tuning (see HF logs for step details)...", total=None)
+        try:
+            results = run_finetuning(config=ft_config)
+        except Exception as e:
+            console.print(f"[red]Fine-tuning failed: {e}[/]")
+            raise typer.Exit(1)
+
+    # Report results
+    metrics = results.get("metrics", {})
+    console.print(f"[green]✓ Fine-tuning complete[/]")
+    console.print(f"  Train loss: {metrics.get('train_loss', 'N/A'):.4f}")
+    console.print(f"  Runtime: {metrics.get('train_runtime', 0):.1f}s")
+    console.print(f"  Samples/sec: {metrics.get('train_samples_per_second', 0):.2f}")
+    console.print(f"  Output: {output_dir.resolve()}")
 
 
 @app.command()

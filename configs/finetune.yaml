@@ -1,0 +1,39 @@
+# Fine-tuning Configuration (C5 condition)
+# =========================================
+# Used by: dh train --config configs/finetune.yaml --output-dir checkpoints/
+
+model_name: "meta-llama/Llama-3.3-8B-Instruct"
+output_dir: "outputs/finetune"
+
+# LoRA configuration
+lora_r: 16
+lora_alpha: 32
+lora_dropout: 0.05
+lora_target_modules:
+  - "q_proj"
+  - "k_proj"
+  - "v_proj"
+  - "o_proj"
+
+# Training hyperparameters
+num_epochs: 3
+batch_size: 4
+gradient_accumulation_steps: 4
+learning_rate: 2.0e-5
+warmup_ratio: 0.03
+max_seq_length: 2048
+weight_decay: 0.01
+
+# Data paths
+train_file: "data/finetune_train.json"
+val_file: "data/finetune_val.json"
+num_train_samples: 5000
+num_val_samples: 500
+
+# Seeds
+seed: 42
+
+# Compute
+fp16: true
+bf16: false
+gradient_checkpointing: true
