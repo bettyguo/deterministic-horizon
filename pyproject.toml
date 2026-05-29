@@ -87,8 +87,19 @@ Paper = "https://github.com/bettyguo/deterministic-horizon/blob/main/paper/ICML2
 Documentation = "https://github.com/bettyguo/deterministic-horizon/blob/main/docs/README.md"
 Changelog = "https://github.com/bettyguo/deterministic-horizon/blob/main/CHANGELOG.md"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+# The package sources live flat under src/ (src/__init__.py, src/analysis.py, …)
+# and are exposed as the `deterministic_horizon` import package via this mapping,
+# so `import deterministic_horizon` and all `from deterministic_horizon.X` imports
+# keep working without a nested src/deterministic_horizon/ directory.
+[tool.setuptools]
+package-dir = { "deterministic_horizon" = "src" }
+packages = [
+    "deterministic_horizon",
+    "deterministic_horizon.metrics",
+    "deterministic_horizon.models",
+    "deterministic_horizon.tasks",
+    "deterministic_horizon.training",
+]
 
 [tool.setuptools.package-data]
 deterministic_horizon = ["py.typed"]
