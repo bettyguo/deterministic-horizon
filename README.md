@@ -273,18 +273,6 @@ Bug reports, new tasks, and extensions welcome. See [`CONTRIBUTING.md`](CONTRIBU
 
 ---
 
-## Star history
-
-[![Star History Chart](https://api.star-history.com/svg?repos=deterministic-horizon/deterministic-horizon&type=Date)](https://star-history.com/#deterministic-horizon/deterministic-horizon&Date)
-
----
-
-## Acknowledgments
-
-We thank the ICML reviewers and discussants. The fine-tuning experiments used compute provided by an anonymous donor; the open-weight model evaluations used Together AI credits.
-
----
-
 <div align="center">
 
 **Found this useful?** Star the repo and share with anyone shipping agentic systems.
