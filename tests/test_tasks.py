@@ -1,8 +1,8 @@
 """Unit tests for tasks."""
+
 from __future__ import annotations
 
 import pytest
-
 from deterministic_horizon import PermutationTask, generate_instances
 
 

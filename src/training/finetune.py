@@ -14,17 +14,18 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import Dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    TrainingArguments,
-    Trainer,
     DataCollatorForLanguageModeling,
+    Trainer,
+    TrainingArguments,
 )
 
 try:
-    from peft import LoraConfig, get_peft_model, TaskType
+    from peft import LoraConfig, TaskType, get_peft_model
+
     PEFT_AVAILABLE = True
 except ImportError:
     PEFT_AVAILABLE = False
@@ -174,6 +175,7 @@ def prepare_finetune_dataset(
         Tuple of (num_train_written, num_val_written)
     """
     import random
+
     random.seed(seed)
 
     # Load instances
@@ -182,7 +184,8 @@ def prepare_finetune_dataset(
 
     # Filter instances with valid solutions
     valid_instances = [
-        inst for inst in instances
+        inst
+        for inst in instances
         if inst.get("optimal_solution") and len(inst.get("optimal_solution", [])) > 0
     ]
 
@@ -191,7 +194,7 @@ def prepare_finetune_dataset(
     # Shuffle and split
     random.shuffle(valid_instances)
     train_data = valid_instances[:num_train]
-    val_data = valid_instances[num_train:num_train + num_val]
+    val_data = valid_instances[num_train : num_train + num_val]
 
     # Format for fine-tuning
     def format_instance(inst: dict) -> dict:
@@ -203,7 +206,8 @@ def prepare_finetune_dataset(
                 (op, state)
                 for op, state in zip(
                     inst.get("optimal_solution", []),
-                    inst.get("intermediate_states", [])
+                    inst.get("intermediate_states", []),
+                    strict=False,
                 )
             ],
             "depth": inst.get("depth", len(inst.get("optimal_solution", []))),
@@ -344,18 +348,14 @@ class FinetuneTrainer:
         return {
             "train_loss": train_result.training_loss,
             "train_runtime": train_result.metrics.get("train_runtime", 0),
-            "train_samples_per_second": train_result.metrics.get(
-                "train_samples_per_second", 0
-            ),
+            "train_samples_per_second": train_result.metrics.get("train_samples_per_second", 0),
         }
 
     def _wandb_available(self) -> bool:
         """Check if wandb is available."""
-        try:
-            import wandb
-            return True
-        except ImportError:
-            return False
+        import importlib.util
+
+        return importlib.util.find_spec("wandb") is not None
 
 
 def run_finetuning(

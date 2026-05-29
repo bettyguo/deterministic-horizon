@@ -1,11 +1,11 @@
 """Tests for the analysis module — figure & table generation."""
+
 from __future__ import annotations
 
 import json
 
 import numpy as np
 import pytest
-
 from deterministic_horizon.analysis import (
     decay_curve,
     generate_figures,
@@ -54,7 +54,7 @@ def test_decay_curve_monotone_decreasing():
 
 def test_generate_tables_writes_files(tmp_path):
     results = _synthetic_results()
-    out = generate_tables(results, output_dir=tmp_path)
+    generate_tables(results, output_dir=tmp_path)
     assert (tmp_path / "accuracy_by_depth.md").exists()
     assert (tmp_path / "conditions.md").exists()
     horizon = json.loads((tmp_path / "horizon.json").read_text())

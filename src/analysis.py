@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-
 from deterministic_horizon.metrics import (
     accuracy_by_depth,
     estimate_horizon,
@@ -146,8 +145,13 @@ def _plot_accuracy_decay(results, path, *, plt, dpi, title=None):
 
     # Tool-delegation reference (synthetic BFS = 100%, real models ≈ 94%)
     tool_acc = _tool_accuracy(results)
-    ax.axhline(tool_acc, color="#2a9d2a", linestyle="--", linewidth=1.8,
-               label=f"Tool-integrated (C3): {tool_acc:.0%}")
+    ax.axhline(
+        tool_acc,
+        color="#2a9d2a",
+        linestyle="--",
+        linewidth=1.8,
+        label=f"Tool-integrated (C3): {tool_acc:.0%}",
+    )
 
     # Deterministic horizon marker
     if "d_star" in horizon and horizon["d_star"] is not None:
@@ -245,7 +249,7 @@ def _plot_condition_comparison(results, path, *, plt, dpi):
 
     fig, ax = plt.subplots(figsize=(6.5, 4.0))
     bars = ax.bar(conds, acc, color=colors)
-    for b, v in zip(bars, acc):
+    for b, v in zip(bars, acc, strict=False):
         ax.text(b.get_x() + b.get_width() / 2, v + 1.2, f"{v:.1f}%", ha="center", fontsize=10)
     ax.set_ylim(0, 105)
     ax.set_ylabel("Accuracy (%)")

@@ -1,33 +1,33 @@
 """Anthropic model implementations (Claude models)."""
 
-import json
 import os
 from typing import Any
 
-from tenacity import retry, stop_after_attempt, wait_exponential
-
 from deterministic_horizon.models.base import BaseModel, ModelResponse
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 class AnthropicModel(BaseModel):
     """Interface for Anthropic Claude models."""
-    
+
     PRICING = {}
     MODEL_MAPPING = {}
-    
+
     def _setup_client(self) -> None:
         """Set up Anthropic client."""
         try:
             from anthropic import Anthropic
-        except ImportError:
-            raise ImportError("anthropic package required. Install with: pip install anthropic")
-        
+        except ImportError as err:
+            raise ImportError(
+                "anthropic package required. Install with: pip install anthropic"
+            ) from err
+
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
-        
+
         self._client = Anthropic(api_key=api_key, timeout=self.timeout)
-    
+
     def _get_api_model_name(self) -> str:
         """Get the API model name from the user-friendly name."""
         model_lower = self.model_name.lower()
@@ -35,7 +35,7 @@ class AnthropicModel(BaseModel):
             if key in model_lower:
                 return value
         return self.model_name
-    
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=60),
@@ -50,23 +50,23 @@ class AnthropicModel(BaseModel):
         # Extract system prompt
         system = None
         filtered_messages = []
-        
+
         for msg in messages:
             if msg["role"] == "system":
                 system = msg["content"]
             else:
                 filtered_messages.append(msg)
-        
+
         call_kwargs = {
             "model": self._get_api_model_name(),
             "messages": filtered_messages,
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
         }
-        
+
         if system:
             call_kwargs["system"] = system
-        
+
         if tools:
             call_kwargs["tools"] = [
                 {
@@ -76,10 +76,10 @@ class AnthropicModel(BaseModel):
                 }
                 for tool in tools
             ]
-        
+
         response = self._client.messages.create(**call_kwargs)
         return self._response_to_dict(response)
-    
+
     def _response_to_dict(self, response: Any) -> dict[str, Any]:
         """Convert Anthropic response to dictionary."""
         return {
@@ -97,7 +97,7 @@ class AnthropicModel(BaseModel):
                 "output_tokens": response.usage.output_tokens,
             },
         }
-    
+
     def _block_to_dict(self, block: Any) -> dict[str, Any]:
         """Convert content block to dictionary."""
         if block.type == "tool_use":
@@ -107,7 +107,7 @@ class AnthropicModel(BaseModel):
                 "input": block.input,
             }
         return {}
-    
+
     def _parse_response(
         self,
         raw_response: dict[str, Any],
@@ -116,29 +116,31 @@ class AnthropicModel(BaseModel):
         """Parse Anthropic API response."""
         content_blocks = raw_response.get("content", [])
         usage = raw_response.get("usage", {})
-        
+
         # Extract text content
         text_content = []
         tool_calls = []
-        
+
         for block in content_blocks:
             if block.get("type") == "text":
                 text_content.append(block.get("text", ""))
             elif block.get("type") == "tool_use":
-                tool_calls.append({
-                    "id": block.get("id", ""),
-                    "type": "function",
-                    "function": {
-                        "name": block.get("name", ""),
-                        "arguments": block.get("input", {}),
-                    },
-                })
-        
+                tool_calls.append(
+                    {
+                        "id": block.get("id", ""),
+                        "type": "function",
+                        "function": {
+                            "name": block.get("name", ""),
+                            "arguments": block.get("input", {}),
+                        },
+                    }
+                )
+
         content = "\n".join(text_content)
-        
+
         prompt_tokens = usage.get("input_tokens", 0)
         completion_tokens = usage.get("output_tokens", 0)
-        
+
         return ModelResponse(
             content=content,
             model=raw_response.get("model", self.model_name),
@@ -149,7 +151,7 @@ class AnthropicModel(BaseModel):
             tool_calls=tool_calls,
             raw_response=raw_response,
         )
-    
+
     @property
     def pricing(self) -> dict[str, float]:
         """Get pricing for this model."""
@@ -162,7 +164,7 @@ class AnthropicModel(BaseModel):
 
 class ClaudeSonnetModel(AnthropicModel):
     """Claude Sonnet specific implementation."""
-    
+
     def __init__(self, **kwargs) -> None:
         kwargs.setdefault("model_name", "claude-4.5-sonnet")
         super().__init__(**kwargs)
@@ -170,7 +172,7 @@ class ClaudeSonnetModel(AnthropicModel):
 
 class ClaudeOpusModel(AnthropicModel):
     """Claude Opus specific implementation."""
-    
+
     def __init__(self, **kwargs) -> None:
         kwargs.setdefault("model_name", "claude-4-opus")
         super().__init__(**kwargs)

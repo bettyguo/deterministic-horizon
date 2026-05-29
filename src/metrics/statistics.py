@@ -16,12 +16,12 @@ def accuracy_by_depth(
 ) -> dict[int, dict[str, float]]:
     """
     Compute accuracy statistics grouped by reasoning depth.
-    
+
     Args:
         results: List of result dictionaries
         depth_key: Key for depth value
         correct_key: Key for correctness boolean
-        
+
     Returns:
         Dictionary mapping depth to accuracy statistics
     """
@@ -31,14 +31,14 @@ def accuracy_by_depth(
         depth = result.get(depth_key, 0)
         correct = result.get(correct_key, False)
         by_depth[depth].append(1 if correct else 0)
-    
+
     # Compute stats
     stats_by_depth = {}
     for depth, values in sorted(by_depth.items()):
         arr = np.array(values)
         n = len(arr)
         mean = np.mean(arr)
-        
+
         # Wilson score interval for binomial proportion
         if n > 0:
             z = 1.96  # 95% CI
@@ -49,7 +49,7 @@ def accuracy_by_depth(
             ci_high = min(1, center + spread)
         else:
             ci_low = ci_high = 0.0
-        
+
         stats_by_depth[depth] = {
             "accuracy": mean,
             "std": np.std(arr),
@@ -57,7 +57,7 @@ def accuracy_by_depth(
             "ci_high": ci_high,
             "n": n,
         }
-    
+
     return stats_by_depth
 
 
@@ -81,20 +81,20 @@ def estimate_horizon(
         threshold: Accuracy threshold for horizon (default 0.5)
         depth_key: Key for depth value
         correct_key: Key for correctness boolean
-        
+
     Returns:
         Dictionary with horizon estimate and confidence interval
     """
     acc_by_depth = accuracy_by_depth(results, depth_key, correct_key)
-    
+
     depths = np.array(sorted(acc_by_depth.keys()))
     accuracies = np.array([acc_by_depth[d]["accuracy"] for d in depths])
-    
+
     # Fit super-exponential model: acc = exp(-a*d - b*d²)
     def decoherence_model(d, eps0, gamma):
         # Simplified model assuming L >> d
         return np.exp(-eps0 * d - gamma * d * (d + 1) / 2)
-    
+
     try:
         # Fit model
         popt, pcov = curve_fit(
@@ -106,41 +106,47 @@ def estimate_horizon(
             maxfev=10000,
         )
         eps0, gamma = popt
-        
+
         # Compute fitted curve
         fitted = decoherence_model(depths, eps0, gamma)
-        r_squared = 1 - np.sum((accuracies - fitted)**2) / np.sum((accuracies - np.mean(accuracies))**2)
-        
+        r_squared = 1 - np.sum((accuracies - fitted) ** 2) / np.sum(
+            (accuracies - np.mean(accuracies)) ** 2
+        )
+
         # Find horizon analytically
         # P = threshold => -eps0*d - gamma*d²/2 = log(threshold)
         # Solving: d* = (-eps0 + sqrt(eps0² - 2*gamma*log(threshold))) / gamma
         log_thresh = np.log(threshold)
         discriminant = eps0**2 - 2 * gamma * log_thresh
-        
+
         if discriminant >= 0 and gamma > 0:
             d_star = (-eps0 + np.sqrt(discriminant)) / gamma
         else:
             # Fallback: find by interpolation
             d_star = float(np.interp(threshold, accuracies[::-1], depths[::-1]))
-        
+
         # Bootstrap CI for d_star
         d_star_bootstrap = []
         n_bootstrap = 1000
         rng = np.random.RandomState(42)
-        
+
         for _ in range(n_bootstrap):
             # Resample results
             indices = rng.choice(len(results), size=len(results), replace=True)
             resampled = [results[i] for i in indices]
             resampled_acc = accuracy_by_depth(resampled, depth_key, correct_key)
-            
+
             resamp_depths = np.array(sorted(resampled_acc.keys()))
             resamp_accs = np.array([resampled_acc[d]["accuracy"] for d in resamp_depths])
-            
+
             try:
                 popt_boot, _ = curve_fit(
-                    decoherence_model, resamp_depths, resamp_accs,
-                    p0=[eps0, gamma], bounds=([0, 0], [1, 0.1]), maxfev=5000
+                    decoherence_model,
+                    resamp_depths,
+                    resamp_accs,
+                    p0=[eps0, gamma],
+                    bounds=([0, 0], [1, 0.1]),
+                    maxfev=5000,
                 )
                 eps0_b, gamma_b = popt_boot
                 disc_b = eps0_b**2 - 2 * gamma_b * log_thresh
@@ -149,13 +155,13 @@ def estimate_horizon(
                     d_star_bootstrap.append(d_star_b)
             except (RuntimeError, ValueError):
                 continue
-        
+
         if d_star_bootstrap:
             ci_low = np.percentile(d_star_bootstrap, 2.5)
             ci_high = np.percentile(d_star_bootstrap, 97.5)
         else:
             ci_low = ci_high = d_star
-        
+
         return {
             "d_star": d_star,
             "d_star_ci_low": ci_low,
@@ -165,14 +171,14 @@ def estimate_horizon(
             "r_squared": r_squared,
             "threshold": threshold,
         }
-        
+
     except (RuntimeError, ValueError):
         # Fallback: simple interpolation
-        for i, (d, acc) in enumerate(zip(depths, accuracies)):
+        for i, (d, acc) in enumerate(zip(depths, accuracies, strict=False)):
             if acc < threshold:
                 if i > 0:
                     # Linear interpolation
-                    d_prev, acc_prev = depths[i-1], accuracies[i-1]
+                    d_prev, acc_prev = depths[i - 1], accuracies[i - 1]
                     d_star = d_prev + (threshold - acc_prev) * (d - d_prev) / (acc - acc_prev)
                 else:
                     d_star = d
@@ -183,7 +189,7 @@ def estimate_horizon(
                     "method": "interpolation",
                     "threshold": threshold,
                 }
-        
+
         return {
             "d_star": float(depths[-1]),
             "method": "lower_bound",
@@ -198,49 +204,46 @@ def cross_model_correlation(
 ) -> dict[str, Any]:
     """
     Compute cross-model correlation to assess architectural vs training causation.
-    
+
     High correlation (r > 0.8) suggests architectural cause.
     Low correlation suggests training-specific cause.
-    
+
     Args:
         results_by_model: Dictionary mapping model name to results
         instance_key: Key for instance identifier
         correct_key: Key for correctness boolean
-        
+
     Returns:
         Correlation matrix and summary statistics
     """
     models = list(results_by_model.keys())
     n_models = len(models)
-    
+
     # Build instance-to-correctness mapping for each model
     model_results = {}
     all_instances = set()
-    
+
     for model, results in results_by_model.items():
-        model_results[model] = {
-            r[instance_key]: r[correct_key] for r in results
-        }
+        model_results[model] = {r[instance_key]: r[correct_key] for r in results}
         all_instances.update(model_results[model].keys())
-    
+
     # Find common instances
     common_instances = all_instances.copy()
     for results in model_results.values():
         common_instances &= set(results.keys())
-    
+
     common_instances = sorted(common_instances)
-    
+
     # Build correctness vectors
     vectors = {}
     for model in models:
-        vectors[model] = np.array([
-            1 if model_results[model].get(inst, False) else 0
-            for inst in common_instances
-        ])
-    
+        vectors[model] = np.array(
+            [1 if model_results[model].get(inst, False) else 0 for inst in common_instances]
+        )
+
     # Compute correlation matrix
     corr_matrix = np.zeros((n_models, n_models))
-    
+
     for i, model_i in enumerate(models):
         for j, model_j in enumerate(models):
             if i == j:
@@ -248,10 +251,10 @@ def cross_model_correlation(
             else:
                 r, p = stats.pearsonr(vectors[model_i], vectors[model_j])
                 corr_matrix[i, j] = r
-    
+
     # Summary statistics
     upper_triangle = corr_matrix[np.triu_indices(n_models, k=1)]
-    
+
     return {
         "correlation_matrix": corr_matrix.tolist(),
         "models": models,
@@ -272,36 +275,36 @@ def bootstrap_ci(
 ) -> tuple[float, float, float]:
     """
     Compute bootstrap confidence interval.
-    
+
     Args:
         data: Data values
         statistic: Statistic function (default: mean)
         n_bootstrap: Number of bootstrap samples
         confidence: Confidence level
         seed: Random seed
-        
+
     Returns:
         (point_estimate, ci_low, ci_high)
     """
     data = np.array(data)
     rng = np.random.RandomState(seed)
-    
+
     # Point estimate
     point = statistic(data)
-    
+
     # Bootstrap
     bootstrap_stats = []
     for _ in range(n_bootstrap):
         sample = rng.choice(data, size=len(data), replace=True)
         bootstrap_stats.append(statistic(sample))
-    
+
     bootstrap_stats = np.array(bootstrap_stats)
-    
+
     # Percentile CI
     alpha = 1 - confidence
     ci_low = np.percentile(bootstrap_stats, 100 * alpha / 2)
     ci_high = np.percentile(bootstrap_stats, 100 * (1 - alpha / 2))
-    
+
     return point, ci_low, ci_high
 
 
@@ -312,39 +315,39 @@ def compute_effect_size(
 ) -> dict[str, float]:
     """
     Compute effect size between two groups.
-    
+
     Args:
         group1: First group values
         group2: Second group values
         method: Effect size method ('cohens_d', 'hedges_g', 'glass_delta')
-        
+
     Returns:
         Dictionary with effect size and interpretation
     """
     g1 = np.array(group1)
     g2 = np.array(group2)
-    
+
     n1, n2 = len(g1), len(g2)
     mean1, mean2 = np.mean(g1), np.mean(g2)
     var1, var2 = np.var(g1, ddof=1), np.var(g2, ddof=1)
-    
+
     if method == "cohens_d":
         pooled_std = np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2))
         d = (mean1 - mean2) / pooled_std if pooled_std > 0 else 0
-        
+
     elif method == "hedges_g":
         pooled_std = np.sqrt(((n1 - 1) * var1 + (n2 - 1) * var2) / (n1 + n2 - 2))
         d = (mean1 - mean2) / pooled_std if pooled_std > 0 else 0
         # Hedges correction
         correction = 1 - 3 / (4 * (n1 + n2) - 9)
         d = d * correction
-        
+
     elif method == "glass_delta":
         d = (mean1 - mean2) / np.sqrt(var2) if var2 > 0 else 0
-        
+
     else:
         raise ValueError(f"Unknown method: {method}")
-    
+
     # Interpret effect size
     abs_d = abs(d)
     if abs_d < 0.2:
@@ -355,7 +358,7 @@ def compute_effect_size(
         interpretation = "medium"
     else:
         interpretation = "large"
-    
+
     return {
         "effect_size": d,
         "method": method,
@@ -392,25 +395,22 @@ def fit_decoherence_model(
 
     def model(m, eps0, gamma):
         return np.exp(-m * eps0 - gamma * m * (m + 1) / (2 * L))
-    
+
     try:
         popt, pcov = curve_fit(
-            model, depths, accuracies,
-            p0=[0.02, 0.001],
-            bounds=([0, 0], [1, 1]),
-            maxfev=10000
+            model, depths, accuracies, p0=[0.02, 0.001], bounds=([0, 0], [1, 1]), maxfev=10000
         )
         eps0, gamma = popt
-        
+
         # Goodness of fit
         fitted = model(depths, eps0, gamma)
         ss_res = np.sum((accuracies - fitted) ** 2)
         ss_tot = np.sum((accuracies - np.mean(accuracies)) ** 2)
         r_squared = 1 - ss_res / ss_tot if ss_tot > 0 else 0
-        
+
         # Parameter CIs from covariance
         perr = np.sqrt(np.diag(pcov))
-        
+
         return {
             "eps0": eps0,
             "eps0_std": perr[0],
@@ -420,7 +420,7 @@ def fit_decoherence_model(
             "l_eff": L,
             "fitted_values": fitted.tolist(),
         }
-        
+
     except (RuntimeError, ValueError) as e:
         return {
             "error": str(e),

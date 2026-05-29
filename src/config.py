@@ -2,23 +2,22 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import yaml
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 
 @dataclass
 class ModelConfig:
     """Model configuration."""
-    
+
     name: str = ""
     provider: str = ""
     temperature: float = 0.0
     max_tokens: int = 8192  # paper reproducibility setting
     timeout: int = 120
     max_retries: int = 3
-    
+
     # Local model specific
     model_path: str | None = None
     device: str = "auto"
@@ -29,13 +28,11 @@ class ModelConfig:
 @dataclass
 class TaskConfig:
     """Task configuration."""
-    
+
     name: str = "permutation"
     n_elements: int = 8
     # Canonical PermutationProbe operators: adjacent transpositions on S_n.
-    operators: list[str] = field(
-        default_factory=lambda: [f"swap_{i}{i + 1}" for i in range(7)]
-    )
+    operators: list[str] = field(default_factory=lambda: [f"swap_{i}{i + 1}" for i in range(7)])
 
     # Instance generation (max depth is the diameter C(n,2) = 28 for n=8).
     min_depth: int = 4
@@ -47,12 +44,12 @@ class TaskConfig:
 @dataclass
 class ExperimentConfig:
     """Experiment configuration."""
-    
+
     name: str = "default"
     seeds: list[int] = field(default_factory=lambda: [42, 2024, 2025])
     n_instances: int = 1000
     conditions: list[str] = field(default_factory=lambda: ["C1", "C2", "C3"])
-    
+
     # Evaluation
     batch_size: int = 50
     save_traces: bool = True
@@ -63,7 +60,7 @@ class ExperimentConfig:
 @dataclass
 class OutputConfig:
     """Output configuration."""
-    
+
     dir: str = "results"
     save_traces: bool = True
     save_metrics: bool = True
@@ -74,16 +71,16 @@ class OutputConfig:
 @dataclass
 class Config:
     """Main configuration container."""
-    
+
     model: ModelConfig = field(default_factory=ModelConfig)
     task: TaskConfig = field(default_factory=TaskConfig)
     experiment: ExperimentConfig = field(default_factory=ExperimentConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
-    
+
     # Reproducibility
     random_seed: int = 42
     deterministic: bool = True
-    
+
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
         if self.experiment.n_instances < 1:
@@ -96,35 +93,37 @@ class Config:
             raise ValueError(f"Invalid conditions: {invalid}")
 
 
-def load_config(config_path: str | Path | None = None, overrides: list[str] | None = None) -> Config:
+def load_config(
+    config_path: str | Path | None = None, overrides: list[str] | None = None
+) -> Config:
     """
     Load configuration from YAML file with optional overrides.
-    
+
     Args:
         config_path: Path to YAML config file
         overrides: List of override strings (e.g., ["model.name=gpt-4o"])
-        
+
     Returns:
         Validated Config object
     """
     # Start with defaults
     base_config = OmegaConf.structured(Config)
-    
+
     # Load from file if provided
     if config_path is not None:
         config_path = Path(config_path)
         if config_path.exists():
             file_config = OmegaConf.load(config_path)
             base_config = OmegaConf.merge(base_config, file_config)
-    
+
     # Apply command-line overrides
     if overrides:
         override_config = OmegaConf.from_dotlist(overrides)
         base_config = OmegaConf.merge(base_config, override_config)
-    
+
     # Convert to Config dataclass
     config_dict = OmegaConf.to_container(base_config, resolve=True)
-    
+
     return Config(
         model=ModelConfig(**config_dict.get("model", {})),
         task=TaskConfig(**config_dict.get("task", {})),
@@ -139,7 +138,7 @@ def save_config(config: Config, path: str | Path) -> None:
     """Save configuration to YAML file."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     config_dict = {
         "model": {
             "name": config.model.name,
@@ -176,6 +175,6 @@ def save_config(config: Config, path: str | Path) -> None:
         "random_seed": config.random_seed,
         "deterministic": config.deterministic,
     }
-    
+
     with open(path, "w") as f:
         yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
