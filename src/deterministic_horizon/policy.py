@@ -2,9 +2,28 @@
 Practitioner-facing decision helper: *should my agent think harder, or call a tool?*
 
 This module turns the paper's theoretical bound into a one-line API that agentic
-systems can call at planning time. The math comes from Theorem 1:
-``P(correct at depth d) ≈ exp(-d·ε₀ − γ·d(d+1) / (2L))``; the heuristic constants
-come from the cross-model fits in §5 of the paper.
+systems can call at planning time. The math is **exactly** the paper's:
+
+* Per-step error (Definition 4.1 / Theorem 4.2, "Decoherence Bound"):
+
+      ε(d) = ε₀ + γ · d / L_eff
+
+* Closed-form accuracy decay obtained by integrating it (Theorem 4.2):
+
+      P(correct at depth d) ≈ exp(−d·ε₀ − γ·d(d+1) / (2·L_eff))
+
+* Deterministic Horizon (Theorem 4.5), the depth at which P = α:
+
+      d* = (−ε₀·L_eff + √(ε₀²·L_eff² + 2γ·L_eff·ln(1/α))) / γ
+
+The constants are the paper's: γ = 0.15 and, for GPT-4o, ε₀ = 0.02,
+L_eff = 150, which reproduces the paper's d* ≈ 22.3 (§4, Theorem 4.5). The
+*effective decoherence length* L_eff = O(10²) steps is far smaller than the raw
+context window L = O(10⁵) tokens — using the raw L would wash out the quadratic
+term and incorrectly predict near-perfect accuracy (paper, Appendix on numerical
+examples). We therefore parameterise every model by its measured d* and a
+per-model (ε₀, L_eff) pair calibrated so the decay curve crosses α = 0.5 exactly
+at that d*.
 
 Example
 -------
@@ -14,12 +33,12 @@ False
 >>> should_delegate(estimated_depth=35)        # past the horizon — delegate
 True
 >>> decision = delegation_decision(
-...     estimated_depth=22,
+...     estimated_depth=30,
 ...     model="claude-4.5-opus",
 ...     tool_available=True,
 ... )
 >>> decision.delegate, round(decision.expected_neural_accuracy, 2)
-(True, 0.43)
+(True, 0.45)
 """
 
 from __future__ import annotations
@@ -29,35 +48,78 @@ from dataclasses import dataclass
 from typing import Literal
 
 # ---------------------------------------------------------------------------
-# Per-model decoherence parameters (Table 3 of the paper).
+# Paper-canonical constants (§4, Theorems 4.2 & 4.5).
 #
-# These are the (ε₀, γ, d*) triples fit to each frontier model under the C1
-# (neural chain-of-thought) condition. The defaults are deliberately
-# *conservative*: when in doubt, the helper prefers to recommend delegation.
+#   γ      attention decay rate, shared across models.
+#   ε₀     baseline per-step error (paper MLE 0.020, 95% CI [0.017, 0.023]).
+#   L_eff  *effective* decoherence length, O(10²) steps — NOT the raw context
+#          window. For GPT-4o the paper reports L_eff = 150, giving d* ≈ 22.3.
 # ---------------------------------------------------------------------------
 
-MODEL_HORIZONS: dict[str, dict[str, float]] = {
-    # OpenAI
-    "gpt-4o":            {"eps0": 0.022, "gamma": 0.0028, "d_star": 22.0},
-    "gpt-4o-mini":       {"eps0": 0.030, "gamma": 0.0040, "d_star": 19.0},
-    "o1":                {"eps0": 0.015, "gamma": 0.0020, "d_star": 28.0},
-    "o1-mini":           {"eps0": 0.018, "gamma": 0.0024, "d_star": 25.0},
-    "o3-mini":           {"eps0": 0.013, "gamma": 0.0018, "d_star": 31.0},
-    # Anthropic
-    "claude-3.5-sonnet": {"eps0": 0.020, "gamma": 0.0025, "d_star": 24.0},
-    "claude-4.5-sonnet": {"eps0": 0.018, "gamma": 0.0022, "d_star": 26.0},
-    "claude-4.5-opus":   {"eps0": 0.015, "gamma": 0.0020, "d_star": 28.0},
-    # DeepSeek
-    "deepseek-v3":       {"eps0": 0.024, "gamma": 0.0030, "d_star": 21.0},
-    "deepseek-r1":       {"eps0": 0.016, "gamma": 0.0021, "d_star": 27.0},
-    # Open-weight
-    "llama-3.1-70b":     {"eps0": 0.028, "gamma": 0.0035, "d_star": 20.0},
-    "qwen-2.5-72b":      {"eps0": 0.026, "gamma": 0.0032, "d_star": 21.0},
-    # Sensible fallback — "average frontier model"
-    "default":           {"eps0": 0.020, "gamma": 0.0025, "d_star": 24.0},
+GAMMA: float = 0.15
+ALPHA_DEFAULT: float = 0.5  # success threshold used to define d*
+
+
+def _l_eff_for(eps0: float, d_star: float, alpha: float = ALPHA_DEFAULT) -> float:
+    """
+    Effective decoherence length L_eff that makes the Theorem 4.2 decay curve
+    pass through accuracy ``alpha`` at depth ``d_star``.
+
+    Solving ``exp(−d*·ε₀ − γ·d*(d*+1)/(2·L_eff)) = α`` for L_eff:
+
+        L_eff = γ·d*(d*+1) / (2·(ln(1/α) − ε₀·d*))
+
+    This keeps the per-model decay curve, the reported d*, and ``horizon_for``
+    in exact agreement.
+    """
+    denom = math.log(1.0 / alpha) - eps0 * d_star
+    if denom <= 0:
+        raise ValueError(
+            f"ε₀·d* must be below ln(1/α); got ε₀={eps0}, d*={d_star}, α={alpha}"
+        )
+    return GAMMA * d_star * (d_star + 1.0) / (2.0 * denom)
+
+
+# ---------------------------------------------------------------------------
+# Per-model decoherence parameters.
+#
+# ``d_star`` values are the paper's measured Deterministic Horizons on
+# PermutationProbe (Table 3 "Main results" and Table 5 "Architecture ablation").
+# Only the models for which the paper reports a d* on PermutationProbe are
+# listed; every other identifier falls back to ``"default"`` (the midpoint of
+# the measured d* ∈ [19, 31] range). ε₀ is held near the paper's fitted 0.020
+# (reasoning-tuned models slightly lower, small open-weight models slightly
+# higher); L_eff is then derived so the curve crosses 0.5 exactly at d*.
+# ---------------------------------------------------------------------------
+
+_MODEL_EPS0_DSTAR: dict[str, tuple[float, float]] = {
+    # General-purpose (closed) ------------------------------------------------
+    "gpt-4o":          (0.020, 22.0),   # paper canonical: ε₀=0.02, L_eff=150, d*≈22.3
+    "claude-4.5-opus": (0.018, 27.0),
+    # Reasoning-specialised ---------------------------------------------------
+    "o3-mini":         (0.014, 31.0),   # highest horizon in the suite
+    "deepseek-r1":     (0.015, 29.0),
+    # Open-weight (published H, d_h — used for the √(d_h·H) scaling check) -----
+    "llama-3.1-8b":    (0.022, 20.0),
+    "llama-3.3-70b":   (0.018, 28.0),
+    "qwen-2.5-7b":     (0.023, 19.0),
+    "qwen-2.5-72b":    (0.018, 28.0),
+    # Cross-model fallback ("average frontier model", midpoint of [19, 31]) ---
+    "default":         (0.020, 24.0),
 }
 
-# Empirical mean tool-integrated (C3) accuracy across models / domains (§5).
+MODEL_HORIZONS: dict[str, dict[str, float]] = {
+    name: {
+        "eps0": eps0,
+        "d_star": d_star,
+        "l_eff": _l_eff_for(eps0, d_star),
+        "gamma": GAMMA,
+    }
+    for name, (eps0, d_star) in _MODEL_EPS0_DSTAR.items()
+}
+
+# Empirical mean tool-integrated (C3) accuracy across models / domains
+# (paper headline: 86–94%; cross-domain mean ≈ 0.92).
 DEFAULT_TOOL_ACCURACY: float = 0.92
 
 
@@ -96,18 +158,22 @@ class DelegationDecision:
         )
 
 
+def _params_for(model: str) -> dict[str, float]:
+    return MODEL_HORIZONS.get(model.lower(), MODEL_HORIZONS["default"])
+
+
 def expected_neural_accuracy(
     depth: int | float,
     model: str = "default",
     *,
     eps0: float | None = None,
-    gamma: float | None = None,
+    l_eff: float | None = None,
 ) -> float:
     """
     Expected accuracy of a neural chain-of-thought at the given depth.
 
-    Implements the closed-form decay model from Theorem 1:
-    ``P(correct) ≈ exp(-d·ε₀ − γ·d(d+1) / 2)``.
+    Implements the closed-form decay of Theorem 4.2:
+    ``P(correct) ≈ exp(−d·ε₀ − γ·d(d+1) / (2·L_eff))``.
 
     Parameters
     ----------
@@ -116,9 +182,10 @@ def expected_neural_accuracy(
     model : str
         Model identifier — see :data:`MODEL_HORIZONS` for known names. Unknown
         names fall back to the ``"default"`` (cross-model average) parameters.
-    eps0, gamma : float, optional
+    eps0, l_eff : float, optional
         Override the per-model decoherence parameters directly. When provided,
-        ``model`` is ignored.
+        the corresponding value from ``model`` is ignored. ``γ`` is the shared
+        paper constant :data:`GAMMA`.
 
     Returns
     -------
@@ -127,16 +194,16 @@ def expected_neural_accuracy(
     """
     if depth < 0:
         raise ValueError(f"depth must be non-negative, got {depth!r}")
-    params = MODEL_HORIZONS.get(model.lower(), MODEL_HORIZONS["default"])
+    params = _params_for(model)
     e0 = eps0 if eps0 is not None else params["eps0"]
-    g = gamma if gamma is not None else params["gamma"]
+    le = l_eff if l_eff is not None else params["l_eff"]
     d = float(depth)
-    return float(math.exp(-d * e0 - g * d * (d + 1) / 2.0))
+    return float(math.exp(-d * e0 - GAMMA * d * (d + 1.0) / (2.0 * le)))
 
 
 def horizon_for(model: str = "default") -> float:
     """Return the Deterministic Horizon d* for ``model`` (or the default)."""
-    return float(MODEL_HORIZONS.get(model.lower(), MODEL_HORIZONS["default"])["d_star"])
+    return float(_params_for(model)["d_star"])
 
 
 def should_delegate(
@@ -200,7 +267,7 @@ def delegation_decision(
         If False, the decision is forced to *not* delegate regardless of d.
     tool_accuracy : float
         Empirical accuracy you've seen for your tool on similar tasks.
-        Defaults to the §5 cross-domain mean of 0.92.
+        Defaults to the cross-domain mean of 0.92 (paper §5).
     threshold : float
         Below this expected neural accuracy, automatically delegate.
     margin : float
@@ -269,6 +336,7 @@ def delegation_decision(
 
 
 __all__ = [
+    "GAMMA",
     "MODEL_HORIZONS",
     "DEFAULT_TOOL_ACCURACY",
     "DelegationDecision",

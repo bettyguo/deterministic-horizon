@@ -16,7 +16,7 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     __version__ = version("deterministic-horizon")
 except PackageNotFoundError:  # editable install / source checkout
-    __version__ = "1.0.0"
+    __version__ = "1.0.1"
 
 from deterministic_horizon.config import Config, load_config
 from deterministic_horizon.metrics import (

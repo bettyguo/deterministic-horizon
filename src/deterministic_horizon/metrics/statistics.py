@@ -1,7 +1,8 @@
 """Statistical utilities for Deterministic Horizon analysis."""
 
 from collections import defaultdict
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 from scipy import stats
@@ -68,10 +69,13 @@ def estimate_horizon(
 ) -> dict[str, Any]:
     """
     Estimate the Deterministic Horizon d* where accuracy crosses threshold.
-    
-    Uses super-exponential fit from Theorem 1 of the paper:
-    P(correct) = exp(-m*ε₀ - γ*m*(m+1)/(2L))
-    
+
+    Uses the super-exponential fit from Theorem 4.2 of the paper. We fit the
+    reduced form ``P(correct) = exp(-ε₀·d - g·d(d+1)/2)`` where the fitted slope
+    ``g = γ / L_eff`` already absorbs the effective decoherence length; the
+    closed-form horizon below is then Theorem 4.5 with L_eff folded into g:
+    ``d* = (-ε₀ + sqrt(ε₀² + 2g·ln(1/α))) / g``.
+
     Args:
         results: List of result dictionaries
         threshold: Accuracy threshold for horizon (default 0.5)
@@ -162,7 +166,7 @@ def estimate_horizon(
             "threshold": threshold,
         }
         
-    except (RuntimeError, ValueError) as e:
+    except (RuntimeError, ValueError):
         # Fallback: simple interpolation
         for i, (d, acc) in enumerate(zip(depths, accuracies)):
             if acc < threshold:
@@ -364,25 +368,28 @@ def compute_effect_size(
 def fit_decoherence_model(
     depths: Sequence[int],
     accuracies: Sequence[float],
-    context_length: int = 128000,
+    l_eff: float = 150.0,
 ) -> dict[str, Any]:
     """
-    Fit the decoherence model from Theorem 1.
-    
-    Model: P(correct) = exp(-m*ε₀ - γ*m*(m+1)/(2L))
-    
+    Fit the decoherence model from Theorem 4.2.
+
+    Model: P(correct) = exp(-m*ε₀ - γ*m*(m+1)/(2*L_eff))
+
     Args:
         depths: Reasoning depths
         accuracies: Accuracy values at each depth
-        context_length: Model context length L
-        
+        l_eff: *Effective* decoherence length L_eff (O(10²) steps), the number
+            of reasoning steps over which attention keeps usable state
+            resolution — NOT the raw context window L=O(10⁵). The paper's
+            GPT-4o fit uses L_eff = 150.
+
     Returns:
         Fitted parameters and goodness of fit
     """
     depths = np.array(depths)
     accuracies = np.array(accuracies)
-    L = context_length
-    
+    L = l_eff
+
     def model(m, eps0, gamma):
         return np.exp(-m * eps0 - gamma * m * (m + 1) / (2 * L))
     
@@ -410,7 +417,7 @@ def fit_decoherence_model(
             "gamma": gamma,
             "gamma_std": perr[1],
             "r_squared": r_squared,
-            "context_length": L,
+            "l_eff": L,
             "fitted_values": fitted.tolist(),
         }
         

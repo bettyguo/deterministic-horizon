@@ -95,5 +95,5 @@ def test_fit_decoherence_model_recovers_params():
     depths = np.arange(2, 50, 2)
     eps0, gamma = 0.02, 0.0030
     accs = np.exp(-eps0 * depths - gamma * depths * (depths + 1) / 2)
-    out = fit_decoherence_model(depths.tolist(), accs.tolist(), context_length=1)
+    out = fit_decoherence_model(depths.tolist(), accs.tolist(), l_eff=1)
     assert out["r_squared"] > 0.99

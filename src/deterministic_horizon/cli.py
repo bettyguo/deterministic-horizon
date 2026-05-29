@@ -32,9 +32,11 @@ console = Console()
 def generate(
     task: str = typer.Option("permutation", help="Task type"),
     n_instances: int = typer.Option(1000, help="Number of instances"),
-    min_depth: int = typer.Option(5, help="Minimum reasoning depth"),
-    max_depth: int = typer.Option(50, help="Maximum reasoning depth"),
-    depth_step: int = typer.Option(5, help="Step between depths"),
+    min_depth: int = typer.Option(4, help="Minimum reasoning depth"),
+    max_depth: int = typer.Option(
+        28, help="Maximum reasoning depth (<= C(n,2); 28 for the default n=8)"
+    ),
+    depth_step: int = typer.Option(4, help="Step between depths"),
     seed: int = typer.Option(42, help="Random seed"),
     output: Path = typer.Option(..., help="Output file path"),
 ) -> None:
@@ -57,6 +59,7 @@ def generate(
             task=task,
             n_instances=n_instances,
             depth_range=(min_depth, max_depth),
+            depth_step=depth_step,
             seed=seed,
         )
     
@@ -283,9 +286,9 @@ def list_tasks() -> None:
     table.add_column("Description", style="green")
     
     descriptions = {
-        "permutation": "Permutation puzzle (swap, rotate operations)",
-        "fsa": "Finite State Automaton simulation",
-        "arithmetic": "Multi-step arithmetic operations",
+        "permutation": "PermutationProbe — adjacent-transposition puzzle on S_n",
+        "fsa": "FSA-Sim — finite state automaton simulation",
+        "arithmetic": "ArithChain — multi-step modular arithmetic",
     }
     
     for task_name in sorted(TASK_REGISTRY.keys()):

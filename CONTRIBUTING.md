@@ -6,7 +6,7 @@ extensions are welcome.
 ## Quick start
 
 ```bash
-git clone https://github.com/deterministic-horizon/deterministic-horizon
+git clone https://github.com/bettyguo/deterministic-horizon
 cd deterministic-horizon
 pip install -e ".[dev,all]"
 pre-commit install

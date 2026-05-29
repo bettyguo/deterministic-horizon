@@ -3,23 +3,30 @@ message: "If you use this software or build on the ideas, please cite both the p
 title: "The Deterministic Horizon: When Extended Reasoning Fails and Tool Delegation Becomes Necessary"
 abstract: >
   Extended chain-of-thought reasoning can degrade performance on deterministic
-  state-tracking tasks — not due to preference biases, but fundamental
-  information-theoretic limits in decoder-only transformers. We establish an
-  Attention Bottleneck Theorem with matching lower bound, a context-dependent
-  error model yielding super-exponential accuracy decay, the State-Space
-  Jaccard metric distinguishing capability from preference failures, and the
-  Deterministic Horizon d* ∈ [19, 31] beyond which tool delegation becomes
-  necessary. Across 12 models and 8 task domains, tool-integrated reasoning
-  achieves 94% accuracy versus 28–42% for neural chain-of-thought.
+  state-tracking tasks — not due to preference biases, but limits rooted in the
+  information-theoretic capacity of decoder-only attention. We establish an
+  Attention Bottleneck Theorem with a complementary achievability construction, a
+  context-dependent error model yielding super-exponential accuracy decay, the
+  State-Space Jaccard metric distinguishing capability from preference failures,
+  and the Deterministic Horizon d* ∈ [19, 31] beyond which tool delegation becomes
+  necessary. Across 12 models and 8 task domains, tool-integrated reasoning reaches
+  86–94% accuracy versus 24–42% for neural chain-of-thought.
 authors:
-  - family-names: "Deterministic Horizon Authors"
-    given-names: "Anonymous"
+  - family-names: "Guo"
+    given-names: "Dongxin"
+    affiliation: "The University of Hong Kong"
+  - family-names: "Wu"
+    given-names: "Jikun"
+    affiliation: "Brain Investing Limited; Stellaris AI Limited"
+  - family-names: "Yiu"
+    given-names: "Siu Ming"
+    affiliation: "The University of Hong Kong"
 type: software
 license: MIT
-version: "1.0.0"
-date-released: "2026-05-14"
-url: "https://github.com/deterministic-horizon/deterministic-horizon"
-repository-code: "https://github.com/deterministic-horizon/deterministic-horizon"
+version: "1.0.1"
+date-released: "2026-05-29"
+url: "https://github.com/bettyguo/deterministic-horizon"
+repository-code: "https://github.com/bettyguo/deterministic-horizon"
 keywords:
   - chain-of-thought
   - reasoning
@@ -33,8 +40,12 @@ preferred-citation:
   type: conference-paper
   title: "The Deterministic Horizon: When Extended Reasoning Fails and Tool Delegation Becomes Necessary"
   authors:
-    - family-names: "Anonymous"
-      given-names: "Authors"
+    - family-names: "Guo"
+      given-names: "Dongxin"
+    - family-names: "Wu"
+      given-names: "Jikun"
+    - family-names: "Yiu"
+      given-names: "Siu Ming"
   conference:
     name: "International Conference on Machine Learning (ICML)"
   year: 2026

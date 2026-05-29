@@ -277,11 +277,16 @@ class BaseTask(ABC):
         """
         depths = list(range(min_depth, max_depth + 1, depth_step))
         instances_per_depth = n_instances // len(depths)
-        
+
         instances = []
         for depth in depths:
             for _ in range(instances_per_depth):
-                instances.append(self.generate_instance(depth))
+                try:
+                    instances.append(self.generate_instance(depth))
+                except ValueError:
+                    # Depth exceeds this task's reachable diameter (e.g. a
+                    # permutation depth above C(n, 2)); skip it rather than abort.
+                    break
         
         # Shuffle to avoid depth-based ordering artifacts
         self._rng.shuffle(instances)

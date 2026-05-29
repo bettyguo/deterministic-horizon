@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 class FinetuneConfig:
     """Configuration for fine-tuning experiments."""
 
-    # Model
-    model_name: str = "meta-llama/Llama-3.3-8B-Instruct"
+    # Model (paper §6.3 fine-tuning experiment uses Llama-3.1-8B-Instruct)
+    model_name: str = "meta-llama/Llama-3.1-8B-Instruct"
     output_dir: str = "outputs/finetune"
 
     # LoRA configuration
@@ -48,11 +48,12 @@ class FinetuneConfig:
         default_factory=lambda: ["q_proj", "k_proj", "v_proj", "o_proj"]
     )
 
-    # Training
+    # Training (paper: 3 epochs, lr 2e-5 with cosine decay, batch size 8)
     num_epochs: int = 3
-    batch_size: int = 4
-    gradient_accumulation_steps: int = 4
+    batch_size: int = 8
+    gradient_accumulation_steps: int = 1
     learning_rate: float = 2e-5
+    lr_scheduler_type: str = "cosine"
     warmup_ratio: float = 0.03
     max_seq_length: int = 2048
     weight_decay: float = 0.01
@@ -312,6 +313,7 @@ class FinetuneTrainer:
             per_device_eval_batch_size=self.config.batch_size,
             gradient_accumulation_steps=self.config.gradient_accumulation_steps,
             learning_rate=self.config.learning_rate,
+            lr_scheduler_type=self.config.lr_scheduler_type,
             warmup_ratio=self.config.warmup_ratio,
             weight_decay=self.config.weight_decay,
             fp16=self.config.fp16,

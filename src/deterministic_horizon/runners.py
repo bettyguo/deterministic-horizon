@@ -24,7 +24,7 @@ def run_evaluation(
     conditions: Sequence[str] = ("C1", "C3"),
     *,
     temperature: float = 0.0,
-    max_tokens: int = 4096,
+    max_tokens: int = 8192,
     task: str | None = None,
     progress: bool = True,
 ) -> list[dict[str, Any]]:

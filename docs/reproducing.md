@@ -3,7 +3,7 @@
 ## TL;DR
 
 ```bash
-git clone https://github.com/deterministic-horizon/deterministic-horizon
+git clone https://github.com/bettyguo/deterministic-horizon
 cd deterministic-horizon
 pip install -e ".[dev,all]"
 make paper-figures
@@ -16,8 +16,10 @@ This regenerates every figure and table in the paper from the **cached, pre-comp
 
 ```bash
 # 1) Generate instances (deterministic; same as paper)
+# For n=8 the BFS-optimal depth is capped at the diameter C(8,2)=28; use a
+# larger n for deeper instances (the paper uses n in {8, 12, 16}).
 dh generate --task permutation --n-instances 500 \
-            --min-depth 4 --max-depth 50 --seed 42 \
+            --min-depth 4 --max-depth 28 --seed 42 \
             --output data/permutation_n8.json
 
 # 2) Evaluate one or more models
@@ -47,7 +49,7 @@ The numbers in the paper were collected on consumer hardware (M3 Mac and a singl
 
 | Stage | Time | Cost |
 |---|---|---|
-| Instance generation (BFS up to depth 50) | ~30 minutes (single core) | — |
+| Instance generation (BFS-optimal, up to depth 60 at n=16) | ~30 minutes (single core) | — |
 | API evaluations (12 models × 5 conditions × 8 tasks × 500 instances × 3 seeds) | ~36 hours wall-clock | ~$3,420 |
 | Fine-tuning experiment (C5) | ~6 hours on 1× A100 | ~$15 |
 | Analysis + figures | ~2 minutes | — |

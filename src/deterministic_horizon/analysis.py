@@ -13,16 +13,15 @@ from __future__ import annotations
 
 import json
 import logging
-import math
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
 from deterministic_horizon.metrics import (
     accuracy_by_depth,
     estimate_horizon,
-    fit_decoherence_model,
 )
 
 log = logging.getLogger(__name__)
@@ -36,11 +35,19 @@ def decay_curve(
     depths: Sequence[float] | np.ndarray,
     eps0: float = 0.02,
     gamma: float = 0.15,
-    context_length: int = 128_000,
+    l_eff: float = 150.0,
 ) -> np.ndarray:
-    """Closed-form decay from Theorem 1: ``exp(-d·ε₀ − γ·d(d+1)/(2L))``."""
+    """
+    Closed-form decay from Theorem 4.2: ``exp(-d·ε₀ − γ·d(d+1)/(2·L_eff))``.
+
+    ``l_eff`` is the *effective decoherence length* (O(10²) steps), **not** the
+    raw context window. The paper's canonical GPT-4o constants
+    (ε₀=0.02, γ=0.15, L_eff=150) place the horizon at d* ≈ 22.3; substituting
+    the raw context window L=O(10⁵) would erase the quadratic term and wrongly
+    predict near-perfect accuracy.
+    """
     d = np.asarray(depths, dtype=float)
-    return np.exp(-d * eps0 - gamma * d * (d + 1) / (2.0 * context_length))
+    return np.exp(-d * eps0 - gamma * d * (d + 1) / (2.0 * l_eff))
 
 
 # ---------------------------------------------------------------------------
@@ -301,7 +308,10 @@ def generate_tables(
         out["conditions"] = p
 
     # --- horizon.json ---
-    horizon = estimate_horizon(results, threshold=0.5)
+    # The Deterministic Horizon is the *neural CoT* (C1) 50% crossover; never
+    # pool it with the tool condition (C3), which is correct at every depth.
+    cot_results = [r for r in results if r.get("condition") in (None, "C1")]
+    horizon = estimate_horizon(cot_results or results, threshold=0.5)
     p = output_dir / "horizon.json"
     p.write_text(json.dumps(horizon, indent=2, default=float), encoding="utf-8")
     out["horizon"] = p

@@ -15,7 +15,7 @@ class ModelConfig:
     name: str = ""
     provider: str = ""
     temperature: float = 0.0
-    max_tokens: int = 4096
+    max_tokens: int = 8192  # paper reproducibility setting
     timeout: int = 120
     max_retries: int = 3
     
@@ -32,12 +32,15 @@ class TaskConfig:
     
     name: str = "permutation"
     n_elements: int = 8
-    operators: list[str] = field(default_factory=lambda: ["swap", "rotate"])
-    
-    # Instance generation
-    min_depth: int = 5
-    max_depth: int = 50
-    depth_step: int = 5
+    # Canonical PermutationProbe operators: adjacent transpositions on S_n.
+    operators: list[str] = field(
+        default_factory=lambda: [f"swap_{i}{i + 1}" for i in range(7)]
+    )
+
+    # Instance generation (max depth is the diameter C(n,2) = 28 for n=8).
+    min_depth: int = 4
+    max_depth: int = 28
+    depth_step: int = 4
     instances_per_depth: int = 100
 
 

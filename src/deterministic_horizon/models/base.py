@@ -53,7 +53,7 @@ class BaseModel(ABC):
         self,
         model_name: str,
         temperature: float = 0.0,
-        max_tokens: int = 4096,
+        max_tokens: int = 8192,
         timeout: int = 120,
         max_retries: int = 3,
         **kwargs,

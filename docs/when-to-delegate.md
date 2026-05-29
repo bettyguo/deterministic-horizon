@@ -20,10 +20,10 @@ else:
 Need the full justification (for logging or human review)?
 
 ```python
-d = delegation_decision(estimated_depth=depth, model="claude-4.5-opus")
+d = delegation_decision(estimated_depth=30, model="claude-4.5-opus")
 print(d.explain())
-# At estimated depth d=27, model 'claude-4.5-opus' is expected to reach 31% via CoT
-# vs. 92% via tools (horizon d*=28). → delegate.
+# At estimated depth d=30, model 'claude-4.5-opus' is expected to reach 45% via CoT
+# vs. 92% via tools (horizon d*=27). → delegate.
 ```
 
 ## Picking `estimated_depth`
@@ -36,22 +36,20 @@ You need an estimator. Three pragmatic options, in increasing order of fidelity:
 
 Get the order of magnitude right; the helper only branches at `d* ≈ 20–30`.
 
-## Per-model horizons (from Table 3 of the paper)
+## Per-model horizons (PermutationProbe; Table 3 "Main results" + Table 5 "Architecture ablation")
 
 | Model | $d^*$ | What it means for your agent |
 |---|---:|---|
-| `gpt-4o`            | 22 | Delegate beyond ~20-step subproblems. |
-| `gpt-4o-mini`       | 19 | Delegate aggressively. |
-| `claude-3.5-sonnet` | 24 | |
-| `claude-4.5-sonnet` | 26 | |
-| `claude-4.5-opus`   | 28 | More headroom — but still finite. |
-| `o1`                | 28 | "Reasoning model"; helps, but doesn't *abolish* the wall. |
-| `o3-mini`           | 31 | Highest in our sweep. |
-| `deepseek-r1`       | 27 | |
-| `llama-3.1-70b`     | 20 | |
-| `qwen-2.5-72b`      | 21 | |
+| `gpt-4o`          | 22 | Delegate beyond ~20-step subproblems. |
+| `claude-4.5-opus` | 27 | More headroom — but still finite. |
+| `o3-mini`         | 31 | Highest in our sweep ("reasoning model" — helps, but doesn't *abolish* the wall). |
+| `deepseek-r1`     | 29 | Reasoning-specialised. |
+| `llama-3.1-8b`    | 20 | Small open-weight — delegate aggressively. |
+| `llama-3.3-70b`   | 28 | Scaling helps: +40% horizon over 8B. |
+| `qwen-2.5-7b`     | 19 | Lowest in the suite. |
+| `qwen-2.5-72b`    | 28 | Same $d^*$ as Llama-70B (matched $\sqrt{d_h H}$). |
 
-These are the 50%-accuracy crossover points for the C1 (neural CoT) condition on permutation puzzles. They generalise to other state-tracking domains in §5 of the paper with cross-task correlation $r=0.81$–$0.91$.
+These are the paper's measured 50%-accuracy crossover points for the C1 (neural CoT) condition on PermutationProbe. Only models with a paper-reported $d^*$ are listed; any other identifier (e.g. `claude-4.5-sonnet`) falls back to the cross-model `default` ($d^*=24$). The horizons generalise to other state-tracking domains (§5) with cross-task correlation $r=0.81$–$0.91$.
 
 ## When the rule does *not* apply
 
@@ -76,9 +74,9 @@ You're shipping a code-search agent over a 200k-LOC repo. You measure (or guess)
 ```python
 >>> from deterministic_horizon import expected_neural_accuracy, should_delegate
 >>> round(expected_neural_accuracy(5, model="claude-4.5-opus"), 2)
-0.9
+0.91
 >>> round(expected_neural_accuracy(14, model="claude-4.5-opus"), 2)
-0.66
+0.73
 >>> should_delegate(5, model="claude-4.5-opus")    # neural ≈ tool — stay neural
 False
 >>> should_delegate(14, model="claude-4.5-opus")   # tool wins by > margin — delegate
@@ -90,5 +88,5 @@ So warm-cache symbol resolution stays neural, and on cold Mondays you flip to th
 ## See also
 
 - The decoherence model: [`theorem-cheatsheet.md`](theorem-cheatsheet.md)
-- Where the constants come from: §5 and Table 3 of the [paper](../paper/ICML2026_DeterministicHorizon_FINAL.pdf)
+- Where the constants come from: §4–§5 and Tables 3 & 5 of the [paper](../paper/ICML2026_DeterministicHorizon_CameraReady.pdf)
 - The implementation: [`src/deterministic_horizon/policy.py`](../src/deterministic_horizon/policy.py)

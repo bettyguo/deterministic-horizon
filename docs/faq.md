@@ -18,11 +18,11 @@ Three reasons: they have an unambiguous BFS oracle (we always know the optimal d
 
 ## Does this apply to Mixture-of-Experts / Mamba / RWKV?
 
-Theorem 1 is specific to decoder-only attention. State-space models (SSMs) share the $\text{TC}^0$ ceiling (Merrill 2024) but have a *different* capacity bound — we report preliminary results in Appendix D and welcome contributions extending the framework.
+The decoherence bound is derived for decoder-only causal attention. State-space models (SSMs) share the $\text{TC}^0$ ceiling (Merrill 2024 — "the illusion of state") but the per-step capacity term differs, so the same $d^*$ values need not transfer. Extending the framework to MoE / Mamba / RWKV is open future work (see the research issue drafts under `.github/ISSUE_DRAFTS/`), and contributions are welcome.
 
 ## I want to try this on my own task. Where do I start?
 
-Subclass `deterministic_horizon.tasks.BaseTask` and implement five methods (`initial_state`, `apply_operator`, `state_equal`, `state_to_string`, `parse_state`). That's enough to run all five conditions. See [`tasks/permutation.py`](../src/deterministic_horizon/tasks/permutation.py) for a 200-line reference. Then either run the CLI or call `dh.evaluate(...)`.
+Subclass `deterministic_horizon.tasks.BaseTask` and implement five methods (`initial_state`, `apply_operator`, `state_equal`, `state_to_string`, `parse_state`). That's enough to run all five conditions. See [`tasks/permutation.py`](../src/deterministic_horizon/tasks/permutation.py) for the reference implementation. Then either run the CLI or call `dh.evaluate(...)`.
 
 ## Do I need GPUs?
 
@@ -35,10 +35,10 @@ When the next subproblem your agent faces is $\gtrsim 22$ deterministic state-tr
 ## How do I cite this?
 
 ```bibtex
-@inproceedings{deterministichorizon2026,
+@inproceedings{guo2026deterministic,
   title        = {The Deterministic Horizon: When Extended Reasoning Fails
                   and Tool Delegation Becomes Necessary},
-  author       = {Anonymous Authors},
+  author       = {Guo, Dongxin and Wu, Jikun and Yiu, Siu Ming},
   booktitle    = {Proceedings of the 43rd International Conference on Machine Learning (ICML)},
   year         = {2026},
 }

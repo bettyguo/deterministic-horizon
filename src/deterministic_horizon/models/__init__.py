@@ -31,6 +31,7 @@ _REGISTRY: dict[str, tuple[str, str]] = {
     "o1-preview": ("deterministic_horizon.models.openai_models", "OpenAIModel"),
     "o1-mini": ("deterministic_horizon.models.openai_models", "OpenAIModel"),
     "o3-mini": ("deterministic_horizon.models.openai_models", "OpenAIModel"),
+    "o3": ("deterministic_horizon.models.openai_models", "OpenAIModel"),
     # Anthropic
     "claude-3.5-sonnet": ("deterministic_horizon.models.anthropic_models", "AnthropicModel"),
     "claude-4.5-sonnet": ("deterministic_horizon.models.anthropic_models", "AnthropicModel"),
@@ -39,9 +40,9 @@ _REGISTRY: dict[str, tuple[str, str]] = {
     # DeepSeek
     "deepseek-r1": ("deterministic_horizon.models.deepseek_models", "DeepSeekModel"),
     "deepseek-v3": ("deterministic_horizon.models.deepseek_models", "DeepSeekModel"),
-    # Local / open weight
+    # Local / open weight (paper's open-weight suite)
     "llama-3.3-70b": ("deterministic_horizon.models.local_models", "LocalModel"),
-    "llama-3.3-8b": ("deterministic_horizon.models.local_models", "LocalModel"),
+    "llama-3.1-8b": ("deterministic_horizon.models.local_models", "LocalModel"),
     "qwen-2.5-72b": ("deterministic_horizon.models.local_models", "LocalModel"),
     "qwen-2.5-7b": ("deterministic_horizon.models.local_models", "LocalModel"),
 }
@@ -77,7 +78,7 @@ MODEL_REGISTRY = _LazyRegistry()
 def load_model(
     model_name: str,
     temperature: float = 0.0,
-    max_tokens: int = 4096,
+    max_tokens: int = 8192,
     **kwargs,
 ) -> BaseModel:
     """

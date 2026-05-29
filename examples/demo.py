@@ -4,13 +4,13 @@
 
 Run this script without any API keys — it reproduces the headline finding
 from the paper using a *synthetic* noisy reasoner whose per-step error
-follows the context-dependent model ε(d) = ε₀ + γ·d/L. Tool-integrated
-reasoning is simulated by running an exact BFS solver.
+follows the context-dependent model ε(d) = ε₀ + γ·d/L_eff (Theorem 4.2).
+Tool-integrated reasoning is simulated by running an exact BFS solver.
 
 What you should see:
-    • Neural CoT accuracy collapses past d ≈ 20–25 steps.
+    • Neural CoT accuracy crosses 50% at the Deterministic Horizon d* ≈ 22.
     • BFS-as-a-tool stays at ~100% regardless of depth.
-    • The empirical decay curve matches Theorem 1 with R² ≳ 0.95.
+    • The empirical decay curve matches Theorem 4.2 with R² ≳ 0.95.
     • A figure is written to ``analysis/figure_decay.png``.
 
 Usage:
@@ -22,38 +22,38 @@ import math
 import random
 from pathlib import Path
 
-import numpy as np
-
 from deterministic_horizon import PermutationTask
 from deterministic_horizon.analysis import generate_figures, generate_tables
-from deterministic_horizon.metrics import estimate_horizon, fit_decoherence_model
+from deterministic_horizon.metrics import estimate_horizon
 
 # ---------- Configuration ----------
 SEED = 42
-N_ELEMENTS = 8
-DEPTHS = [4, 6, 8, 10, 14, 18, 22, 26, 30, 35, 40, 50]
-INSTANCES_PER_DEPTH = 40
+N_ELEMENTS = 8  # S_8, adjacent-transposition diameter C(8,2) = 28
+DEPTHS = [4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28]  # all <= diameter
+INSTANCES_PER_DEPTH = 80
 
-# Decoherence model parameters (Theorem 1: ε(d) = ε₀ + γ·d/L)
-# Chosen so the empirical horizon lands near d* ≈ 22 (matches GPT-4o regime).
-EPS0 = 0.018          # baseline per-step error
-GAMMA = 0.05          # context decay rate
-CONTEXT_LENGTH = 21   # *effective* context window (synthetic — drives γ/L)
+# Paper-canonical decoherence constants (Theorem 4.2 / §4 numerical example):
+# ε(d) = ε₀ + γ·d/L_eff, which places the GPT-4o horizon at d* ≈ 22.3.
+# L_eff is the *effective* decoherence length (O(10²) steps), NOT the raw
+# context window — using the raw context window would erase the quadratic term.
+EPS0 = 0.02          # baseline per-step error
+GAMMA = 0.15         # attention decay rate
+L_EFF = 150          # effective decoherence length
 
 
 def simulate_neural_cot(task: PermutationTask, instance, rng: random.Random) -> bool:
     """
     Simulate a neural CoT reasoner with context-dependent per-step error
-    ε(i) = ε₀ + γ·i/L (Theorem 1 of the paper). At step i we corrupt the
+    ε(i) = ε₀ + γ·i/L_eff (Theorem 4.2 of the paper). At step i we corrupt the
     optimal operator with probability ε(i); otherwise we follow it. The
     trace is then evaluated against the ground-truth target state.
 
     Aggregating across many instances yields the super-exponential decay
-    P(correct at depth d) ≈ exp(-d·ε₀ − γ·d(d+1)/(2L)).
+    P(correct at depth d) ≈ exp(-d·ε₀ − γ·d(d+1)/(2·L_eff)).
     """
     state = list(instance.initial_state)
     for step, optimal_op in enumerate(instance.optimal_solution):
-        eps = min(EPS0 + GAMMA * step / CONTEXT_LENGTH, 0.95)
+        eps = min(EPS0 + GAMMA * step / L_EFF, 0.95)
         if rng.random() < eps:
             op = rng.choice([o for o in task.operators if o != optimal_op])
         else:
@@ -64,9 +64,15 @@ def simulate_neural_cot(task: PermutationTask, instance, rng: random.Random) -> 
 
 
 def simulate_tool(task: PermutationTask, instance) -> bool:
-    """A tool-integrated solver always succeeds (BFS finds optimal solution)."""
-    sol = task.bfs_solve(instance.initial_state, instance.target_state, max_depth=50)
-    return sol is not None
+    """
+    Tool-integrated solver (C3): an exact BFS solver always returns the optimal
+    path. Each instance ships with its verified BFS-optimal solution, so we
+    replay it (cheap, O(depth)) rather than re-running BFS on every call.
+    """
+    state = list(instance.initial_state)
+    for op in instance.optimal_solution:
+        state = task.apply_operator(state, op)
+    return task.state_equal(state, instance.target_state)
 
 
 def main() -> None:

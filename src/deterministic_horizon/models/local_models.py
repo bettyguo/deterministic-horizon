@@ -13,9 +13,14 @@ from deterministic_horizon.models.base import BaseModel, ModelResponse
 
 class LocalModel(BaseModel):
     """Interface for locally-run models using transformers/vLLM."""
-    
-    # HuggingFace model IDs
-    MODEL_MAPPING = {}
+
+    # HuggingFace model IDs (paper's open-weight suite; Reproducibility checklist).
+    MODEL_MAPPING = {
+        "llama-3.1-8b": "meta-llama/Llama-3.1-8B-Instruct",
+        "llama-3.3-70b": "meta-llama/Llama-3.3-70B-Instruct",
+        "qwen-2.5-7b": "Qwen/Qwen2.5-7B-Instruct",
+        "qwen-2.5-72b": "Qwen/Qwen2.5-72B-Instruct",
+    }
     
     def __init__(
         self,
@@ -230,10 +235,16 @@ class LocalModel(BaseModel):
 
 
 class LlamaModel(LocalModel):
-    """Llama-specific implementation."""
-    
+    """Llama-specific implementation.
+
+    The paper's open-weight Llama suite is Llama-3.1-8B and Llama-3.3-70B, so
+    the family version depends on size: 8B → Llama-3.1, 70B → Llama-3.3.
+    """
+
+    _SIZE_TO_NAME = {"8b": "llama-3.1-8b", "70b": "llama-3.3-70b"}
+
     def __init__(self, size: str = "8b", **kwargs) -> None:
-        model_name = f"llama-3.3-{size}"
+        model_name = self._SIZE_TO_NAME.get(size.lower(), f"llama-3.1-{size}")
         super().__init__(model_name=model_name, **kwargs)
 
 

@@ -1,19 +1,27 @@
 """Permutation puzzle task implementation."""
 
 import re
-from typing import Any
 from collections import deque
+from typing import Any
 
 from deterministic_horizon.tasks.base import BaseTask, TaskInstance
 
 
 class PermutationTask(BaseTask):
     """
-    Permutation puzzle task.
-    
-    States are permutations of n elements. Operations include swaps,
-    rotations, and reversals. Goal is to transform initial permutation
-    to target permutation.
+    PermutationProbe task (paper §5).
+
+    States are permutations of ``n`` elements (the symmetric group ``S_n``) and
+    the canonical operators are the ``n-1`` **adjacent transpositions**
+    ``{(i, i+1)}``, matching the paper's task definition (state space ``S_n``,
+    diameter ``C(n, 2)``). Under adjacent transpositions the BFS-optimal solution
+    length from the identity to a target equals the target's inversion count, so
+    instances can be generated at an *exactly* controlled BFS-optimal depth
+    (paper Appendix, "PermutationProbe Instance Generation").
+
+    Rotations/reversals remain available through :meth:`apply_operator` for
+    experimentation, but they are intentionally excluded from the default
+    operator set so that ``optimal_depth`` is a true BFS-optimal depth.
     """
     
     def __init__(
@@ -41,13 +49,13 @@ class PermutationTask(BaseTask):
         }
     
     def default_operators(self) -> list[str]:
-        """Return default operators."""
-        # Use swaps for adjacent pairs and rotations
-        ops = [
-            f"swap_{i}{i+1}" for i in range(self.n_elements - 1)
-        ]
-        ops.extend(["rotate_left", "rotate_right"])
-        return ops
+        """Return the canonical operator set: adjacent transpositions only.
+
+        This matches the paper's PermutationProbe definition (operators =
+        adjacent transpositions ``{(i, i+1)}``), under which BFS-optimal depth
+        equals the inversion count.
+        """
+        return [f"swap_{i}{i + 1}" for i in range(self.n_elements - 1)]
     
     def initial_state(self) -> list[int]:
         """Generate identity permutation as initial state."""
@@ -74,6 +82,101 @@ class PermutationTask(BaseTask):
         if i < len(perm) and j < len(perm):
             perm[i], perm[j] = perm[j], perm[i]
         return perm
+
+    # ------------------------------------------------------------------
+    # BFS-optimal instance generation (paper Appendix, Algorithm 6).
+    #
+    # Under adjacent transpositions the BFS-optimal depth from the identity to
+    # a target equals the target's inversion count. We therefore sample a random
+    # target with *exactly* ``target_depth`` inversions and reconstruct the
+    # optimal solution analytically, guaranteeing ``optimal_depth`` is a genuine
+    # BFS-optimal depth rather than a (possibly non-minimal) random-walk length.
+    # ------------------------------------------------------------------
+    def max_depth(self) -> int:
+        """Graph diameter: C(n, 2) for adjacent transpositions on ``S_n``."""
+        n = self.n_elements
+        return n * (n - 1) // 2
+
+    def _random_target_with_inversions(self, k: int) -> list[int]:
+        """Sample a uniform-ish permutation of ``[0, n)`` with exactly ``k`` inversions."""
+        n = self.n_elements
+        if not 0 <= k <= self.max_depth():
+            raise ValueError(
+                f"target_depth={k} out of range for n={n} "
+                f"(adjacent-transposition diameter is {self.max_depth()})"
+            )
+        remaining = list(range(n))
+        result: list[int] = []
+        left = k
+        for _ in range(n):
+            max_here = len(remaining) - 1
+            # Inversions the *later* positions can still absorb: C(len-1, 2).
+            capacity_after = (len(remaining) - 1) * (len(remaining) - 2) // 2
+            lo = max(0, left - capacity_after)
+            hi = min(max_here, left)
+            take = self._rng.randint(lo, hi)
+            result.append(remaining.pop(take))
+            left -= take
+        return result
+
+    def _optimal_path(
+        self, target: list[int]
+    ) -> tuple[list[str], list[list[int]]]:
+        """Analytic BFS-optimal adjacent-transposition path identity → target."""
+        n = len(target)
+        work = list(range(n))
+        ops: list[str] = []
+        states: list[list[int]] = [list(work)]
+        for i in range(n):
+            j = work.index(target[i], i)
+            for pos in range(j, i, -1):
+                work[pos - 1], work[pos] = work[pos], work[pos - 1]
+                ops.append(f"swap_{pos - 1}{pos}")
+                states.append(list(work))
+        return ops, states
+
+    def generate_instance(self, target_depth: int) -> TaskInstance:
+        """Generate a PermutationProbe instance with BFS-optimal depth ``target_depth``."""
+        import hashlib
+        import json
+
+        initial = self.initial_state()
+        target = self._random_target_with_inversions(target_depth)
+        ops, states = self._optimal_path(target)
+
+        # Defensive verification: the analytic path must be optimal and reach
+        # the target. (Inversion count == minimal adjacent transpositions.)
+        if len(ops) != target_depth or not self.state_equal(states[-1], target):
+            sol = self.bfs_solve(initial, target, max_depth=self.max_depth())
+            if sol is None or len(sol[0]) != target_depth:
+                raise RuntimeError(
+                    f"failed to construct depth-{target_depth} instance for n={self.n_elements}"
+                )
+            ops, states = sol
+
+        instance_data = {
+            "initial": self.state_to_string(initial),
+            "target": self.state_to_string(target),
+            "depth": target_depth,
+        }
+        instance_id = hashlib.md5(
+            json.dumps(instance_data, sort_keys=True).encode()
+        ).hexdigest()[:12]
+
+        prompt, system_prompt = self.format_prompt(initial, target, "C1")
+
+        return TaskInstance(
+            instance_id=instance_id,
+            task_name="permutation",
+            initial_state=initial,
+            target_state=target,
+            optimal_depth=target_depth,
+            optimal_solution=ops,
+            intermediate_states=states,
+            prompt=prompt,
+            system_prompt=system_prompt,
+            metadata={"n_elements": self.n_elements, "operators": self.operators},
+        )
     
     def state_equal(self, state1: list[int], state2: list[int]) -> bool:
         """Check if two permutations are equal."""
@@ -120,9 +223,7 @@ class PermutationTask(BaseTask):
             system_prompt = """You are solving a permutation puzzle. Think through each step carefully, showing the state after each operation.
 
 Available operations:
-- swap_XY: Swap elements at positions X and Y
-- rotate_left: Move first element to end
-- rotate_right: Move last element to start
+- swap_XY: Swap the elements at adjacent positions X and Y (Y = X+1)
 
 Show your work step by step, writing the state after each operation."""
             

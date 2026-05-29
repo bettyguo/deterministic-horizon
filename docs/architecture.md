@@ -12,7 +12,7 @@ src/deterministic_horizon/
 ├── config.py          # OmegaConf loader for configs/*
 ├── tasks/
 │   ├── base.py        # BaseTask, TaskInstance, TaskResult
-│   ├── permutation.py # PermutationTask (n-element swap puzzle)
+│   ├── permutation.py # PermutationProbe (adjacent-transposition puzzle on S_n)
 │   ├── fsa.py         # Finite-state-automaton simulation
 │   └── arithmetic.py  # Multi-step arithmetic chains
 ├── models/
