@@ -27,7 +27,7 @@ from deterministic_horizon.metrics import (
 log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Theoretical curve (Theorem 1: super-exponential decay)
+# Theoretical curve (Theorem 4.2: super-exponential decay)
 # ---------------------------------------------------------------------------
 
 
@@ -142,7 +142,7 @@ def _plot_accuracy_decay(results, path, *, plt, dpi, title=None):
     if eps0 is not None and gamma is not None:
         d_grid = np.linspace(0, max(depths.max(), 50), 200)
         theo = np.exp(-eps0 * d_grid - gamma * d_grid * (d_grid + 1) / 2.0)
-        ax.plot(d_grid, theo, "-", color="#1f5fb4", linewidth=2.2, label="Theory (Thm 1)")
+        ax.plot(d_grid, theo, "-", color="#1f5fb4", linewidth=2.2, label="Theory (Thm 4.2)")
 
     # Tool-delegation reference (synthetic BFS = 100%, real models ≈ 94%)
     tool_acc = _tool_accuracy(results)
