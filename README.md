@@ -243,13 +243,15 @@ Full FAQ: [docs/faq.md](docs/faq.md).
 If you use this code or build on the ideas, please cite:
 
 ```bibtex
-@inproceedings{deterministichorizon2026,
-  title        = {The Deterministic Horizon: When Extended Reasoning Fails
-                  and Tool Delegation Becomes Necessary},
-  author       = {Anonymous Authors},
-  booktitle    = {Proceedings of the 43rd International Conference on Machine Learning (ICML)},
-  year         = {2026},
-  url          = {https://github.com/deterministic-horizon/deterministic-horizon},
+@inproceedings{guo2026deterministic,
+  author = {Guo, Dongxin and Wu, Jikun and Yiu, Siu-Ming},
+  title = {The Deterministic Horizon: When Extended Reasoning Fails and Tool
+                    Delegation Becomes Necessary},
+  booktitle = {Forty-third International Conference on Machine Learning, {ICML}
+                    2026, Seoul, South Korea, July 6-11, 2026},
+  series = {Proceedings of Machine Learning Research},
+  publisher = {{PMLR} / OpenReview.net},
+  year = {2026}
 }
 ```
 
