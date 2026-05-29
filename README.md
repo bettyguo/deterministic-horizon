@@ -245,10 +245,8 @@ If you use this code or build on the ideas, please cite:
 ```bibtex
 @inproceedings{guo2026deterministic,
   author = {Guo, Dongxin and Wu, Jikun and Yiu, Siu-Ming},
-  title = {The Deterministic Horizon: When Extended Reasoning Fails and Tool
-                    Delegation Becomes Necessary},
-  booktitle = {Forty-third International Conference on Machine Learning, {ICML}
-                    2026, Seoul, South Korea, July 6-11, 2026},
+  title = {The Deterministic Horizon: When Extended Reasoning Fails and Tool Delegation Becomes Necessary},
+  booktitle = {Forty-third International Conference on Machine Learning, {ICML} 2026, Seoul, South Korea, July 6-11, 2026},
   series = {Proceedings of Machine Learning Research},
   publisher = {{PMLR} / OpenReview.net},
   year = {2026}
