@@ -4,13 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deterministic-horizon"
-version = "1.0.0"
+version = "1.0.1"
 description = "When Extended Reasoning Fails and Tool Delegation Becomes Necessary — official code for the Deterministic Horizon paper (ICML 2026 submission)."
 readme = "README.md"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.14"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Deterministic Horizon Authors" },
+    { name = "Dongxin Guo" },
+    { name = "Jikun Wu" },
+    { name = "Siu Ming Yiu" },
 ]
 keywords = [
     "chain-of-thought",
@@ -31,6 +33,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
@@ -51,7 +54,7 @@ dependencies = [
 [project.optional-dependencies]
 openai  = ["openai>=1.30"]
 anthropic = ["anthropic>=0.30"]
-local   = ["torch>=2.1", "transformers>=4.40", "accelerate>=0.30"]
+local   = ["torch>=2.1", "transformers>=4.40", "accelerate>=0.30", "peft>=0.11"]
 viz     = ["matplotlib>=3.7", "seaborn>=0.13", "pandas>=2.0"]
 notebook = ["jupyter>=1.0", "ipywidgets>=8.0"]
 dev = [
@@ -77,12 +80,12 @@ deterministic-horizon = "deterministic_horizon.cli:main"
 dh = "deterministic_horizon.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/deterministic-horizon/deterministic-horizon"
-Repository = "https://github.com/deterministic-horizon/deterministic-horizon"
-Issues = "https://github.com/deterministic-horizon/deterministic-horizon/issues"
-Paper = "https://github.com/deterministic-horizon/deterministic-horizon/blob/main/paper/ICML2026_DeterministicHorizon_FINAL.pdf"
-Documentation = "https://github.com/deterministic-horizon/deterministic-horizon/blob/main/docs/README.md"
-Changelog = "https://github.com/deterministic-horizon/deterministic-horizon/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/bettyguo/deterministic-horizon"
+Repository = "https://github.com/bettyguo/deterministic-horizon"
+Issues = "https://github.com/bettyguo/deterministic-horizon/issues"
+Paper = "https://github.com/bettyguo/deterministic-horizon/blob/main/paper/ICML2026_DeterministicHorizon_CameraReady.pdf"
+Documentation = "https://github.com/bettyguo/deterministic-horizon/blob/main/docs/README.md"
+Changelog = "https://github.com/bettyguo/deterministic-horizon/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]

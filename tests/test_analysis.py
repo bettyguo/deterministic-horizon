@@ -47,7 +47,7 @@ def _synthetic_results(seed: int = 0):
 
 def test_decay_curve_monotone_decreasing():
     d = np.arange(0, 60, dtype=float)
-    y = decay_curve(d, eps0=0.02, gamma=0.15, context_length=128_000)
+    y = decay_curve(d, eps0=0.02, gamma=0.15, l_eff=150.0)
     assert y[0] == pytest.approx(1.0)
     assert all(y[i] >= y[i + 1] for i in range(len(y) - 1))
 

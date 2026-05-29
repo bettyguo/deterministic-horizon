@@ -31,5 +31,5 @@ The `should_delegate` API is the part of this project most useful to engineers â
 ## Hints
 
 - Gradio's `gr.Blocks` with `live=True` is the easiest path.
-- The Space can install this package directly: `pip install git+https://github.com/deterministic-horizon/deterministic-horizon`.
+- The Space can install this package directly: `pip install git+https://github.com/bettyguo/deterministic-horizon`.
 - Use `matplotlib`'s `Agg` backend, render to a PNG, and return via `gr.Image` â€” avoids the Plotly dependency.

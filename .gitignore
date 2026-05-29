@@ -83,3 +83,10 @@ paper/*.fdb_latexmk
 *.pth
 *.ckpt
 *.safetensors
+# LaTeX build aux only; the camera-ready PDF, .tex and .bib are tracked
+# (the README and docs link to them).
+paper/algorithm.sty
+paper/algorithmic.sty
+paper/fancyhdr.sty
+paper/icml2026.bst
+paper/icml2026.sty
