@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Discussions
-    url: https://github.com/deterministic-horizon/deterministic-horizon/discussions
+    url: https://github.com/bettyguo/deterministic-horizon/discussions
     about: For open-ended questions and research discussion.
   - name: Read the paper
-    url: https://github.com/deterministic-horizon/deterministic-horizon/blob/main/paper/ICML2026_DeterministicHorizon_FINAL.pdf
+    url: https://github.com/bettyguo/deterministic-horizon/blob/main/paper/ICML2026_DeterministicHorizon_CameraReady.pdf
     about: Most "why" questions are answered in §1–§3 of the paper.

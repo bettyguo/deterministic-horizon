@@ -78,9 +78,16 @@ def test_negative_depth_rejected():
 def test_known_model_horizons_in_documented_range():
     # Paper Abstract claims d* ∈ [19, 31] across the surveyed models.
     for name, params in MODEL_HORIZONS.items():
-        if name == "default":
-            continue
-        assert 15 <= params["d_star"] <= 35, (name, params)
+        assert 19 <= params["d_star"] <= 31, (name, params)
+
+
+def test_expected_accuracy_crosses_half_at_horizon():
+    # By construction the decay curve must cross 0.5 at each model's d*.
+    import pytest as _pytest
+
+    for name, params in MODEL_HORIZONS.items():
+        acc = expected_neural_accuracy(params["d_star"], model=name)
+        assert acc == _pytest.approx(0.5, abs=1e-6), (name, acc)
 
 
 def test_horizon_for_returns_float():
@@ -89,7 +96,7 @@ def test_horizon_for_returns_float():
 
 
 def test_short_problem_at_strong_model_does_not_delegate():
-    # A 5-step problem on o1 should comfortably stay neural.
-    d = delegation_decision(estimated_depth=5, model="o1", tool_available=True)
+    # A 5-step problem on o3-mini (highest horizon, d*=31) should stay neural.
+    d = delegation_decision(estimated_depth=5, model="o3-mini", tool_available=True)
     assert d.delegate is False
     assert d.reason == "below_horizon"
