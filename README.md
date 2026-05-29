@@ -10,11 +10,8 @@
 [![Code style: ruff](https://img.shields.io/badge/lint-ruff-46aef7.svg)](https://github.com/astral-sh/ruff)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/deterministic-horizon/deterministic-horizon/blob/main/notebooks/01_quickstart.ipynb)
 
-**TL;DR — Past ~22 steps of reasoning, every frontier LLM falls off a cliff. Tools don't.**
-
 </div>
 
----
 
 ## The 30-second pitch
 
