@@ -110,13 +110,6 @@ make paper-tables    # regenerate analysis/*.{md,json} from results/sample/
 
 Seeds (`{42, 2024, 2025}`), costs, and a wall-clock breakdown: **[docs/reproducing.md](docs/reproducing.md)**.
 
-<div align="center">
-<img src="assets/figure_ssj.png" alt="State-Space Jaccard precision and recall both decay with depth." width="380"/>
-<img src="assets/figure_conditions.png" alt="Accuracy by condition: tool delegation dominates." width="380"/>
-</div>
-
-<sub><b>Left:</b> SSJ precision <i>and</i> recall both decay ⇒ a <i>capability</i> failure (Decoherence), not a <i>preference</i> failure (where precision would stay high). <b>Right:</b> accuracy by condition on the synthetic sample.</sub>
-
 ---
 
 ## Why this is different from "overthinking" papers
