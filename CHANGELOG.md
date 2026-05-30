@@ -9,14 +9,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - **World-class interactive learning site** (`docs/index.html`) — the
   dependency-free GitHub Pages app grew from a single explorer into a guided,
-  six-section experience: the live horizon explorer (now with a hover tooltip,
+  seven-section experience: the live horizon explorer (now with a hover tooltip,
   shareable permalinks that encode every slider, one-click PNG export, and a
-  "copy Python" button), a **multi-model comparison** chart with toggleable
-  decay curves, a **cost-vs-accuracy** panel that shows why tools are 4.2–4.7×
-  cheaper per correct solution, an animated **two-theories** ledger, a
-  **"think or delegate?" quiz**, and an interactive **three-step theorem
-  walkthrough**. Sticky nav, dark/light with persistence,
+  "copy Python" button), a **multi-model comparison** chart — now with a hover
+  scrubber that ranks every model's accuracy at the depth under the cursor — a
+  **cost-vs-accuracy** panel that shows why tools are 4.2–4.7× cheaper per
+  correct solution, an **agent decomposition planner** that visualises
+  `should_delegate_batch(...)` end-to-end (add sub-goal depths and watch the
+  policy route each step, with all-neural vs. policy-routed success probabilities
+  multiplied across the chain), an animated **two-theories** ledger, a
+  **"think or delegate?" quiz** (now with streak/best tracking, randomised
+  scenarios, and full keyboard play), and an interactive **three-step theorem
+  walkthrough**. Sticky nav, dark/light with persistence, `aria-live` regions,
   `prefers-reduced-motion` support, and keyboard-accessible controls throughout.
+  A headless Playwright pass confirms zero console errors across every section.
 - **Practitioner API helpers** in `policy.py`: `should_delegate_batch(...)`
   (vectorised routing for a whole decomposition), `recommend_model(...)`
   (pick the least over-powered model that still clears the threshold at a given
@@ -27,8 +33,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`analysis.plot_model_horizons(...)`** — the static, publication-grade twin
   of the web comparison chart; ships as `assets/figure_model_horizons.png` and
   appears in the README.
-- Tests for every new helper (`tests/test_policy_extras.py`); the suite is now
-  **60 tests** (was 48).
+- Tests for every new helper (`tests/test_policy_extras.py`), plus a Node-backed
+  JavaScript syntax guard for the explorer (`test_explorer_javascript_parses`,
+  skipped when Node is unavailable); the suite is now **61 tests** (was 48).
 - **Interactive horizon explorer** — the original single-file explorer
   (`docs/horizon-explorer.html` now redirects to `docs/index.html`): live
   sliders for ε₀, γ, L_eff and α that plot the Theorem 4.2 decay curve and

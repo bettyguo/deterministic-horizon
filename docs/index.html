@@ -93,9 +93,15 @@
   .stat .v small{font-size:12.5px;font-weight:600;color:var(--muted)}
   .canvas-wrap{position:relative}
   canvas{width:100%;height:auto;display:block;border-radius:8px}
-  #tooltip{position:absolute;pointer-events:none;background:var(--panel-2);border:1px solid var(--line);
+  #tooltip,#cmpTip{position:absolute;pointer-events:none;background:var(--panel-2);border:1px solid var(--line);
     border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:var(--shadow);opacity:0;transition:opacity .12s;z-index:5;min-width:120px}
-  #tooltip b{font-variant-numeric:tabular-nums}
+  #tooltip b,#cmpTip b{font-variant-numeric:tabular-nums}
+  #cmpTip{min-width:178px;line-height:1.5}
+  #cmpTip .tr{display:flex;justify-content:space-between;gap:14px}
+  #cmpTip .tr .nm{display:flex;align-items:center;gap:6px}
+  #cmpTip .tr .sw{width:9px;height:9px;border-radius:50%;display:inline-block}
+  #cmpTip .tr.me{font-weight:700}
+  #cmpTip .hd{color:var(--muted);font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
   .legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 2px 0;font-size:13px;color:var(--muted)}
   .legend i{display:inline-block;width:22px;height:0;border-top-width:3px;border-top-style:solid;vertical-align:middle;margin-right:6px;border-radius:2px}
   .calc{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
@@ -128,6 +134,29 @@
   .chip .dot{width:10px;height:10px;border-radius:50%}
   .chip[aria-pressed="false"]{opacity:.38}
   .chip[aria-pressed="false"] .dot{filter:grayscale(1)}
+
+  /* ---------- Decomposition planner ---------- */
+  .plan-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+  .plan-add input[type=number]{width:86px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:inherit}
+  .plan-add .quick{display:flex;gap:6px;flex-wrap:wrap}
+  .seg{display:grid;gap:8px;margin:4px 0 0}
+  .sub{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;
+       background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:10px 13px}
+  .sub .idx{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;
+       background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+  .sub .meta{font-size:13px}
+  .sub .meta b{font-variant-numeric:tabular-nums}
+  .sub .route{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:999px;color:#fff;white-space:nowrap}
+  .sub .route.delegate{background:var(--neural)} .sub .route.reason{background:var(--tool)}
+  .sub .rm{cursor:pointer;border:none;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;border-radius:7px}
+  .sub .rm:hover{color:var(--bad);background:var(--panel)}
+  .plan-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin:4px 0 0;background:var(--panel-2)}
+  .plan-bar .seg-cell{display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;min-width:0;
+       overflow:hidden;white-space:nowrap;transition:flex-grow .4s cubic-bezier(.22,1,.36,1)}
+  .plan-empty{color:var(--muted);font-size:13.5px;padding:14px 2px}
+  .gain-note{margin-top:12px;padding:12px 15px;border-radius:11px;border:1px solid var(--tool);
+       background:color-mix(in srgb,var(--tool) 12%,transparent);font-size:14px}
+  .gain-note b{font-variant-numeric:tabular-nums}
 
   /* ---------- Two theories ---------- */
   .theory-grid{overflow-x:auto}
@@ -190,6 +219,7 @@
       <a href="#explorer">Explorer</a>
       <a href="#compare">Compare models</a>
       <a href="#cost">Cost vs. accuracy</a>
+      <a href="#planner">Planner</a>
       <a href="#theories">Two theories</a>
       <a href="#quiz">Quiz</a>
       <a href="#math">The math</a>
@@ -274,7 +304,7 @@
     <!-- VISUAL -->
     <section class="card viz" aria-label="Accuracy versus reasoning depth">
       <h3>Accuracy vs. reasoning depth</h3>
-      <div class="stats">
+      <div class="stats" aria-live="polite">
         <div class="stat hz"><div class="k">Deterministic Horizon</div><div class="v" id="dstar">—</div></div>
         <div class="stat neural"><div class="k">Neural at d*+5</div><div class="v" id="patd">—</div></div>
         <div class="stat tool"><div class="k">Tool advantage past d*</div><div class="v" id="adv">—</div></div>
@@ -298,7 +328,7 @@
           <input type="number" id="depth" min="0" max="200" value="30" aria-label="estimated depth in steps" />
           <span>state-tracking steps deep →</span>
         </div>
-        <div class="verdict" id="verdict"></div>
+        <div class="verdict" id="verdict" role="status" aria-live="polite"></div>
         <div class="eq" id="eqline"></div>
         <div class="actions">
           <button class="btn primary" id="copyPyBtn" title="Copy the equivalent Python call">⧉ Copy Python</button>
@@ -362,6 +392,51 @@
   </div>
 </section>
 
+<!-- ============================ DECOMPOSITION PLANNER ============================ -->
+<section class="band" id="planner">
+  <h2 class="section">Plan a whole decomposition</h2>
+  <p class="lead">Real agents don't face one subproblem — they decompose a goal into many. A plan only succeeds if
+     <i>every</i> step does, so success probabilities <b>multiply</b>, and a single deep step can sink the whole chain.
+     Add the estimated depths of your sub-goals, pick the model in the loop, and watch the policy route each one —
+     this is <span class="mono">should_delegate_batch()</span> made visible.</p>
+  <div class="wrap">
+    <section class="card controls" aria-label="Plan inputs">
+      <h3>Build your decomposition</h3>
+      <div class="row">
+        <label for="planModel">Model in the loop</label>
+        <select id="planModel" aria-label="Model for the plan"></select>
+      </div>
+      <div class="row">
+        <label for="planDepth">Add a sub-goal of depth</label>
+        <div class="plan-add">
+          <input type="number" id="planDepth" min="0" max="200" value="14" aria-label="sub-goal depth in steps" />
+          <button class="btn primary" id="planAdd">＋ Add step</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Quick presets:</div>
+        <div class="plan-add quick" style="margin-top:6px" id="planQuick"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="planClear" title="Remove all steps">↺ Clear</button>
+        <button class="btn" id="planCopyBtn" title="Copy the equivalent Python">⧉ Copy Python</button>
+      </div>
+    </section>
+
+    <section class="card viz" aria-label="Routing plan and end-to-end success">
+      <h3>Routing plan &amp; end-to-end success</h3>
+      <div class="stats">
+        <div class="stat hz"><div class="k">Steps · delegated</div><div class="v" id="planCounts">—</div></div>
+        <div class="stat neural"><div class="k">All-neural success</div><div class="v" id="planNeural">—</div></div>
+        <div class="stat tool"><div class="k">Policy-routed success</div><div class="v" id="planRouted">—</div></div>
+      </div>
+      <div class="plan-bar" id="planBar" aria-hidden="true"></div>
+      <p class="hint" style="margin:6px 2px 0">End-to-end success = product of each step's accuracy on its chosen branch
+        (<span style="color:var(--tool)">■</span> reason · <span style="color:var(--neural)">■</span> delegate).</p>
+      <div class="seg" id="planList" role="list" aria-live="polite"></div>
+      <div class="gain-note" id="planGain" style="display:none"></div>
+    </section>
+  </div>
+</section>
+
 <!-- ============================ TWO THEORIES ============================ -->
 <section class="band" id="theories">
   <h2 class="section">Two theories, four falsifiable predictions</h2>
@@ -397,11 +472,13 @@
       <button class="opt" id="optReason" data-choice="reason">🧠 Keep reasoning</button>
       <button class="opt" id="optDelegate" data-choice="delegate">🛠 Delegate to tool</button>
     </div>
-    <div class="quiz-feedback" id="quizFb"></div>
+    <div class="quiz-feedback" id="quizFb" aria-live="polite"></div>
     <div class="quiz-foot">
       <span class="score" id="quizScore">Score: 0 / 0</span>
+      <span class="score" id="quizStreak">🔥 Streak 0 · best 0</span>
       <button class="btn primary" id="quizNext">Next scenario →</button>
     </div>
+    <p class="hint" style="margin:10px 2px 0">Keyboard: <span class="mono">1</span>/<span class="mono">R</span> reason · <span class="mono">2</span>/<span class="mono">D</span> delegate · <span class="mono">N</span>/<span class="mono">Enter</span> next.</p>
   </div>
 </section>
 
@@ -678,7 +755,7 @@ function render(){ renderStats(); renderVerdict(); }
 el("themeBtn").addEventListener("click",()=>{
   const b=document.body; b.dataset.theme = b.dataset.theme==="dark"?"light":"dark";
   try{ localStorage.setItem("dh-theme", b.dataset.theme); }catch(_){}
-  render(); drawCompare(); drawCost();
+  render(); drawCompare(); drawCost(); renderPlan();
 });
 el("resetBtn").addEventListener("click",()=>{
   presetSel.value="gpt-4o"; el("depth").value=30; applyPreset("gpt-4o"); updateHash(); toast("Reset to GPT-4o defaults");
@@ -751,7 +828,8 @@ const cmpColor = Object.fromEntries(cmpModels.map((m,i)=>[m,CMP_COLORS[i%CMP_COL
   }
 })();
 
-const cmpCv=el("cmpPlot"), cmpCtx=cmpCv.getContext("2d");
+const cmpCv=el("cmpPlot"), cmpCtx=cmpCv.getContext("2d"), cmpTip=el("cmpTip");
+let cmpGeom=null, cmpHoverD=null;
 function drawCompare(){
   const DPR=window.devicePixelRatio||1, W=cmpCv.clientWidth||1100, H=440;
   cmpCv.width=W*DPR; cmpCv.height=H*DPR; cmpCv.style.height=H+"px";
@@ -759,7 +837,8 @@ function drawCompare(){
   const m={l:52,r:120,t:16,b:42}, pw=W-m.l-m.r, ph=H-m.t-m.b;
   const Dmax=60;
   const x=d=>m.l + d/Dmax*pw, y=p=>m.t + (1-p)*ph;
-  const muted=cssVar("--muted"),grid=cssVar("--grid"),tool=cssVar("--tool");
+  cmpGeom={m,pw,ph,Dmax,x,y,H,W};
+  const muted=cssVar("--muted"),grid=cssVar("--grid"),tool=cssVar("--tool"),ink=cssVar("--ink");
 
   cmpCtx.strokeStyle=grid; cmpCtx.fillStyle=muted; cmpCtx.lineWidth=1; cmpCtx.font="11px system-ui";
   cmpCtx.textAlign="right"; cmpCtx.textBaseline="middle";
@@ -769,6 +848,13 @@ function drawCompare(){
   for(let d=0;d<=Dmax;d+=10){ const xx=x(d); cmpCtx.beginPath();cmpCtx.moveTo(xx,m.t);cmpCtx.lineTo(xx,H-m.b);cmpCtx.strokeStyle=grid;cmpCtx.stroke();
     cmpCtx.fillStyle=muted; cmpCtx.fillText(d,xx,H-m.b+6); }
   cmpCtx.fillStyle=muted; cmpCtx.fillText("reasoning depth  d",m.l+pw/2,H-m.b+22);
+
+  // hover scrubber (drawn under the curves)
+  if(cmpHoverD!=null){
+    cmpCtx.strokeStyle=ink; cmpCtx.globalAlpha=.28; cmpCtx.lineWidth=1.4; cmpCtx.setLineDash([3,3]);
+    cmpCtx.beginPath();cmpCtx.moveTo(x(cmpHoverD),m.t);cmpCtx.lineTo(x(cmpHoverD),H-m.b);cmpCtx.stroke();
+    cmpCtx.setLineDash([]); cmpCtx.globalAlpha=1;
+  }
 
   // tool baseline
   cmpCtx.strokeStyle=tool; cmpCtx.setLineDash([7,5]); cmpCtx.lineWidth=1.6;
@@ -790,8 +876,41 @@ function drawCompare(){
     // d* marker
     cmpCtx.fillStyle=cmpColor[name];
     cmpCtx.beginPath();cmpCtx.arc(x(dstar),y(0.5),4,0,7);cmpCtx.fill();
+    // hover dot on this curve
+    if(cmpHoverD!=null){
+      const p=pCorrect(cmpHoverD,eps0,GAMMA_DEFAULT,leff);
+      cmpCtx.fillStyle=cmpColor[name]; cmpCtx.beginPath();cmpCtx.arc(x(cmpHoverD),y(p),4.5,0,7);cmpCtx.fill();
+      cmpCtx.strokeStyle=cssVar("--panel"); cmpCtx.lineWidth=1.5; cmpCtx.stroke();
+    }
   }
 }
+// hover ranking tooltip on the comparison plot
+function cmpHover(ev){
+  if(!cmpGeom) return;
+  const r=cmpCv.getBoundingClientRect(), mx=ev.clientX-r.left, my=ev.clientY-r.top;
+  const {m,pw,Dmax,x,y,W} = cmpGeom;
+  if(mx<m.l||mx>m.l+pw){ cmpLeave(); return; }
+  const d=clamp((mx-m.l)/pw*Dmax, 0, Dmax);
+  cmpHoverD=d; drawCompare();
+  const rows=cmpModels.filter(n=>cmpOn[n]).map(name=>{
+    const [eps0,dstar]=MODELS[name]; const leff=lEffFor(eps0,dstar,0.5);
+    return {name, p:pCorrect(d,eps0,GAMMA_DEFAULT,leff), dstar};
+  }).sort((a,b)=>b.p-a.p);
+  if(!rows.length){ cmpLeave(); return; }
+  // nearest curve to the cursor → highlight
+  let near=rows[0], best=1e9;
+  for(const rr of rows){ const dy=Math.abs(y(rr.p)-my); if(dy<best){best=dy;near=rr;} }
+  cmpTip.innerHTML=`<div class="hd">depth d = ${d.toFixed(0)} · tool 92%</div>`+
+    rows.map(rr=>`<div class="tr${rr.name===near.name?" me":""}">`+
+      `<span class="nm"><span class="sw" style="background:${cmpColor[rr.name]}"></span>${rr.name}</span>`+
+      `<b style="color:${rr.p>=TOOL_DEFAULT-0.10?"var(--tool)":(rr.p<0.5?"var(--neural)":"var(--ink)")}">${(rr.p*100).toFixed(0)}%</b></div>`).join("");
+  cmpTip.style.opacity=1;
+  cmpTip.style.left=clamp(mx+14,0,W-200)+"px";
+  cmpTip.style.top=clamp(my-10,4,cmpGeom.H-rows.length*22-40)+"px";
+}
+function cmpLeave(){ cmpHoverD=null; cmpTip.style.opacity=0; drawCompare(); }
+cmpCv.addEventListener("mousemove", cmpHover);
+cmpCv.addEventListener("mouseleave", cmpLeave);
 
 /* ===========================================================================
  * Section 3 — Cost vs accuracy
@@ -863,6 +982,74 @@ function drawCost(){
 }
 
 /* ===========================================================================
+ * Section 3.5 — Decomposition planner  (visualises should_delegate_batch)
+ * ======================================================================== */
+const planSel=el("planModel");
+for(const name of Object.keys(MODELS)){ const o=document.createElement("option"); o.value=name; o.textContent=name; planSel.appendChild(o); }
+planSel.value="gpt-4o";
+let planSteps=[];
+const PLAN_QUICK=[6,12,18,24,32,45];
+(function buildPlanQuick(){
+  const box=el("planQuick");
+  for(const d of PLAN_QUICK){ const b=document.createElement("button"); b.className="btn"; b.textContent="d="+d;
+    b.title=`Add a depth-${d} sub-goal`;
+    b.addEventListener("click",()=>{ planSteps.push(d); renderPlan(); }); box.appendChild(b); }
+})();
+// policy-identical routing — same source of truth as the quiz below
+function planDecide(model,depth){ return quizDelegate(model,depth); }
+function renderPlan(){
+  const model=planSel.value;
+  const list=el("planList"), bar=el("planBar");
+  list.innerHTML=""; bar.innerHTML="";
+  if(!planSteps.length){
+    list.innerHTML=`<div class="plan-empty">No sub-goals yet — add a few depths above (try the quick presets) to see how the policy routes a whole plan.</div>`;
+    el("planCounts").innerHTML="—"; el("planNeural").innerHTML="—"; el("planRouted").innerHTML="—";
+    el("planGain").style.display="none"; return;
+  }
+  let allNeural=1, routed=1, nDel=0;
+  planSteps.forEach((depth,i)=>{
+    const res=planDecide(model,depth);
+    const branchAcc=res.delegate?TOOL_DEFAULT:res.neural;
+    allNeural*=res.neural; routed*=branchAcc; if(res.delegate) nDel++;
+    const row=document.createElement("div"); row.className="sub"; row.setAttribute("role","listitem");
+    row.innerHTML=`<span class="idx">${i+1}</span>`+
+      `<span class="meta">depth <b>d=${depth}</b> · neural <b>${(res.neural*100).toFixed(0)}%</b>`+
+        `${res.delegate?` · tool <b>${(TOOL_DEFAULT*100).toFixed(0)}%</b>`:""}</span>`+
+      `<span class="route ${res.delegate?"delegate":"reason"}">${res.delegate?"🛠 delegate":"🧠 reason"}</span>`+
+      `<button class="rm" title="Remove" aria-label="Remove step ${i+1}">×</button>`;
+    row.querySelector(".rm").addEventListener("click",()=>{ planSteps.splice(i,1); renderPlan(); });
+    list.appendChild(row);
+    const cell=document.createElement("div"); cell.className="seg-cell";
+    cell.style.flexGrow=Math.max(1,depth); cell.style.background=res.delegate?cssVar("--neural"):cssVar("--tool");
+    cell.textContent=depth>=6?("d"+depth):""; cell.title=`step ${i+1}: d=${depth} → ${res.delegate?"delegate":"reason"}`;
+    bar.appendChild(cell);
+  });
+  el("planCounts").innerHTML=`${planSteps.length} <small>· ${nDel} deleg.</small>`;
+  el("planNeural").innerHTML=(allNeural*100).toFixed(allNeural<0.1?1:0)+'<small>%</small>';
+  el("planRouted").innerHTML=(routed*100).toFixed(0)+'<small>%</small>';
+  const gain=el("planGain");
+  if(routed>allNeural+1e-9){
+    const mult=allNeural>1e-6?(routed/allNeural):Infinity;
+    gain.style.display="block";
+    gain.innerHTML=`Routing with the policy lifts end-to-end success from <b>${(allNeural*100).toFixed(allNeural<0.1?1:0)}%</b> to `+
+      `<b>${(routed*100).toFixed(0)}%</b>`+(isFinite(mult)&&mult>=1.5?` — a <b>${mult.toFixed(mult<10?1:0)}×</b> improvement`:"")+
+      `, by delegating the ${nDel} step${nDel===1?"":"s"} past ${model}'s horizon (d*=${(MODELS[model]||MODELS.default)[1]}).`;
+  } else { gain.style.display="none"; }
+}
+el("planAdd").addEventListener("click",()=>{ const d=clamp(parseInt(el("planDepth").value,10)||0,0,200); planSteps.push(d); renderPlan(); });
+el("planDepth").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); el("planAdd").click(); }});
+el("planClear").addEventListener("click",()=>{ planSteps=[]; renderPlan(); });
+planSel.addEventListener("change",renderPlan);
+el("planCopyBtn").addEventListener("click",async()=>{
+  const model=planSel.value;
+  if(!planSteps.length){ toast("Add a few steps first"); return; }
+  const py=`from deterministic_horizon import should_delegate_batch\n`+
+    `depths = [${planSteps.join(", ")}]\n`+
+    `should_delegate_batch(depths, model="${model}")  # → [${planSteps.map(d=>planDecide(model,d).delegate?"True":"False").join(", ")}]`;
+  const ok=await copyText(py); if(ok) flashCopied(el("planCopyBtn"),"✓ Copied"); else toast("Copy failed");
+});
+
+/* ===========================================================================
  * Section 4 — Two theories
  * ======================================================================== */
 const THEORY=[
@@ -907,7 +1094,7 @@ const QUIZ=[
   {model:"o3-mini", depth:33},
   {model:"llama-3.1-8b", depth:12},
 ];
-let quizIdx=-1, quizScore=0, quizCount=0, quizAnswered=false;
+let quizIdx=-1, quizScore=0, quizCount=0, quizAnswered=false, quizStreak=0, quizBest=0;
 function quizDelegate(model,depth){
   const [eps0,dstar]=MODELS[model]||MODELS.default;
   const leff=lEffFor(eps0,dstar,0.5);
@@ -917,7 +1104,10 @@ function quizDelegate(model,depth){
   return {delegate:false,reason:"below_horizon",neural,dstar};
 }
 function loadQuiz(){
-  quizIdx=(quizIdx+1)%QUIZ.length; quizAnswered=false;
+  let next=quizIdx;                       // randomise, never repeat the same scenario twice
+  if(QUIZ.length>1){ while(next===quizIdx) next=Math.floor(Math.random()*QUIZ.length); }
+  else { next=0; }
+  quizIdx=next; quizAnswered=false;
   const q=QUIZ[quizIdx];
   el("quizQ").textContent=`Your planner estimates the next subproblem is ${q.depth} deterministic state-tracking steps deep.`;
   el("quizMeta").innerHTML=`Model in the loop: <b>${q.model}</b> (horizon d* = ${(MODELS[q.model]||MODELS.default)[1]}). Keep reasoning, or delegate?`;
@@ -929,7 +1119,8 @@ function answerQuiz(choice){
   const q=QUIZ[quizIdx]; const res=quizDelegate(q.model,q.depth);
   const correctChoice = res.delegate ? "delegate" : "reason";
   const right = choice===correctChoice;
-  if(right) quizScore++;
+  if(right){ quizScore++; quizStreak++; quizBest=Math.max(quizBest,quizStreak); } else { quizStreak=0; }
+  el("quizStreak").textContent=`🔥 Streak ${quizStreak} · best ${quizBest}`;
   el("optReason").disabled=true; el("optDelegate").disabled=true;
   el(correctChoice==="reason"?"optReason":"optDelegate").classList.add("correct");
   if(!right) el(choice==="reason"?"optReason":"optDelegate").classList.add("wrong");
@@ -947,6 +1138,16 @@ function answerQuiz(choice){
 el("optReason").addEventListener("click",()=>answerQuiz("reason"));
 el("optDelegate").addEventListener("click",()=>answerQuiz("delegate"));
 el("quizNext").addEventListener("click",loadQuiz);
+// keyboard play — only when the quiz is in view and focus isn't in a field
+document.addEventListener("keydown",e=>{
+  if(/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName||"")) return;
+  const r=el("quiz").getBoundingClientRect();
+  if(r.bottom<0||r.top>innerHeight) return;
+  const k=e.key.toLowerCase();
+  if(k==="1"||k==="r"){ answerQuiz("reason"); }
+  else if(k==="2"||k==="d"){ answerQuiz("delegate"); }
+  else if(k==="n"||k==="enter"){ loadQuiz(); }
+});
 
 /* ===========================================================================
  * Init
@@ -957,7 +1158,8 @@ el("quizNext").addEventListener("click",loadQuiz);
   const fromHash = loadHash();
   if(!fromHash){ presetSel.value="gpt-4o"; applyPreset("gpt-4o", false); }
   syncCost();
-  render(); drawCompare(); drawCost(); loadQuiz();
+  planSteps=[5, 8, 18, 32];            // illustrative default (gpt-4o): two reason, two delegate
+  render(); drawCompare(); drawCost(); renderPlan(); loadQuiz();
   if(fromHash) updateHash();
 })();
 window.addEventListener("resize",()=>{ render(); drawCompare(); drawCost(); });
