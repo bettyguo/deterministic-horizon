@@ -7,6 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **Explorer accessibility, touch & teaching upgrades** (`docs/index.html`):
+  the main decay chart now shades the **reason zone** (left of `d*`) and
+  **delegate zone** (right of `d*`) and labels the tool and threshold lines
+  directly on the canvas, so the core lesson reads at a glance. Both canvas
+  charts moved from mouse-only to **pointer events** (mouse + touch + pen), so
+  the hover probe and the multi-model scrubber now work on phones and tablets.
+  The explorer chart is **keyboard-operable**: focus it and use `←`/`→`
+  (`Shift` = ±5, `Home`/`End` to jump) to move the depth probe, with a visible
+  focus ring and a live decision readout. The hover tooltip now also calls the
+  reason/delegate verdict at the probed depth.
 - **World-class interactive learning site** (`docs/index.html`) — the
   dependency-free GitHub Pages app grew from a single explorer into a guided,
   seven-section experience: the live horizon explorer (now with a hover tooltip,

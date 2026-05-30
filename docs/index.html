@@ -120,6 +120,8 @@
   .stat .v small{font-size:12.5px;font-weight:600;color:var(--muted)}
   .canvas-wrap{position:relative}
   canvas{width:100%;height:auto;display:block;border-radius:8px}
+  canvas:focus{outline:none}
+  canvas:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   #tooltip,#cmpTip{position:absolute;pointer-events:none;background:var(--panel-2);border:1px solid var(--line);
     border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:var(--shadow);opacity:0;transition:opacity .12s;z-index:5;min-width:120px}
   #tooltip b,#cmpTip b{font-variant-numeric:tabular-nums}
@@ -352,7 +354,7 @@
       </div>
 
       <div class="canvas-wrap">
-        <canvas id="plot" width="760" height="420" aria-label="Neural chain-of-thought accuracy decay curve with the tool baseline and the horizon marker"></canvas>
+        <canvas id="plot" width="760" height="420" tabindex="0" role="img" aria-label="Neural chain-of-thought accuracy decay curve with the tool baseline and the horizon marker. Focus and use the left and right arrow keys to move the depth probe; the decision below updates live."></canvas>
         <div id="tooltip" role="status"></div>
       </div>
       <div class="legend">
@@ -360,6 +362,7 @@
         <span><i style="border-color:var(--tool);border-top-style:dashed"></i>Tool-integrated (C3)</span>
         <span><i style="border-color:var(--horizon);border-top-style:dotted"></i>Horizon d*</span>
       </div>
+      <p class="hint" style="margin:8px 2px 0">Hover or drag across the chart (works on touch too) to probe any depth — or click it and use <span class="mono">←</span>/<span class="mono">→</span> (<span class="mono">Shift</span> = ±5). The shaded bands show where the policy says <span style="color:var(--tool)">reason</span> vs. <span style="color:var(--neural)">delegate</span>.</p>
 
       <!-- SENSITIVITY (what moves d*) -->
       <div class="sens">
@@ -748,6 +751,19 @@ function drawPlot(){
   const ink=cssVar("--ink"),muted=cssVar("--muted"),grid=cssVar("--grid"),
         neural=cssVar("--neural"),tool=cssVar("--tool"),hz=cssVar("--horizon");
 
+  // reason zone (left of d*) vs delegate zone (right of d*) — the whole lesson, at a glance
+  const dstar=horizon(S.eps0,S.gamma,S.leff,S.alpha);
+  if(isFinite(dstar)&&dstar>0){
+    const dz=clamp(dstar,0,Dmax);
+    ctx.globalAlpha=.07;
+    ctx.fillStyle=tool;   ctx.fillRect(m.l, m.t, x(dz)-m.l, ph);
+    ctx.fillStyle=neural; ctx.fillRect(x(dz), m.t, (m.l+pw)-x(dz), ph);
+    ctx.globalAlpha=1;
+    ctx.font="700 11px system-ui"; ctx.textBaseline="top";
+    if(x(dz)-m.l>78){ ctx.fillStyle=tool;   ctx.textAlign="left";  ctx.fillText("✓ reason here", m.l+8, m.t+6); }
+    if((m.l+pw)-x(dz)>86){ ctx.fillStyle=neural; ctx.textAlign="right"; ctx.fillText("delegate here →", m.l+pw-8, m.t+6); }
+  }
+
   ctx.strokeStyle=grid; ctx.fillStyle=muted; ctx.lineWidth=1; ctx.font="11px system-ui";
   ctx.textAlign="right"; ctx.textBaseline="middle";
   for(let p=0;p<=1;p+=0.25){ const yy=y(p); ctx.beginPath();ctx.moveTo(m.l,yy);ctx.lineTo(W-m.r,yy);ctx.stroke();
@@ -760,9 +776,13 @@ function drawPlot(){
   // tool line
   ctx.strokeStyle=tool; ctx.setLineDash([7,5]); ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(m.l,y(S.tool));ctx.lineTo(W-m.r,y(S.tool));ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=tool; ctx.font="700 11px system-ui"; ctx.textAlign="right"; ctx.textBaseline="bottom";
+  ctx.fillText("tool "+(S.tool*100).toFixed(0)+"%", W-m.r-4, y(S.tool)-3);
   // threshold line
   ctx.strokeStyle=muted; ctx.globalAlpha=.5; ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(m.l,y(S.alpha));ctx.lineTo(W-m.r,y(S.alpha));ctx.stroke(); ctx.globalAlpha=1;
+  ctx.fillStyle=muted; ctx.font="11px system-ui"; ctx.textAlign="right"; ctx.textBaseline="bottom";
+  ctx.fillText("α "+(S.alpha*100).toFixed(0)+"%", W-m.r-4, y(S.alpha)-3);
 
   // neural decay (filled + line)
   ctx.beginPath();
@@ -776,7 +796,6 @@ function drawPlot(){
   ctx.strokeStyle=neural; ctx.lineWidth=2.6; ctx.stroke();
 
   // horizon marker
-  const dstar=horizon(S.eps0,S.gamma,S.leff,S.alpha);
   if(isFinite(dstar)&&dstar>0&&dstar<=Dmax){
     ctx.strokeStyle=hz; ctx.setLineDash([3,3]); ctx.lineWidth=1.8;
     ctx.beginPath();ctx.moveTo(x(dstar),m.t);ctx.lineTo(x(dstar),H-m.b);ctx.stroke();ctx.setLineDash([]);
@@ -795,19 +814,31 @@ function drawPlot(){
 
 // hover tooltip on the explorer plot
 const tip = el("tooltip");
-cv.addEventListener("mousemove", ev=>{
+cv.addEventListener("pointermove", ev=>{
   if(!plotGeom) return;
-  const r=cv.getBoundingClientRect(), mx=ev.clientX-r.left, my=ev.clientY-r.top;
-  const {m,pw,Dmax,x,y,H} = plotGeom;
+  const r=cv.getBoundingClientRect(), mx=ev.clientX-r.left;
+  const {m,pw,Dmax,y,H} = plotGeom;
   if(mx<m.l||mx>m.l+pw){ tip.style.opacity=0; return; }
   const d=clamp((mx-m.l)/pw*Dmax, 0, Dmax);
   const p=pCorrect(d,S.eps0,S.gamma,S.leff);
+  const past=d>=horizon(S.eps0,S.gamma,S.leff,S.alpha);
   tip.style.opacity=1;
   tip.style.left=clamp(mx+12,0,plotGeom.W-150)+"px";
-  tip.style.top=clamp(y(p)-46,4,H-60)+"px";
-  tip.innerHTML=`depth <b>d=${d.toFixed(0)}</b><br>neural <b>${(p*100).toFixed(1)}%</b> · tool <b>${(S.tool*100).toFixed(0)}%</b>`;
+  tip.style.top=clamp(y(p)-52,4,H-64)+"px";
+  tip.innerHTML=`depth <b>d=${d.toFixed(0)}</b><br>neural <b>${(p*100).toFixed(1)}%</b> · tool <b>${(S.tool*100).toFixed(0)}%</b>`+
+    `<br><span style="color:${past?'var(--neural)':'var(--tool)'}">${past?'→ delegate':'✓ reason'}</span>`;
 });
-cv.addEventListener("mouseleave", ()=>{ tip.style.opacity=0; });
+cv.addEventListener("pointerleave", ()=>{ tip.style.opacity=0; });
+// keyboard: move the depth probe with the arrow keys (Shift = ±5) — full no-mouse access
+cv.addEventListener("keydown", ev=>{
+  if(ev.key!=="ArrowLeft"&&ev.key!=="ArrowRight"&&ev.key!=="Home"&&ev.key!=="End") return;
+  ev.preventDefault();
+  const dn=el("depth"); let v=+dn.value||0;
+  const step=ev.shiftKey?5:1;
+  if(ev.key==="ArrowRight") v+=step; else if(ev.key==="ArrowLeft") v-=step;
+  else if(ev.key==="Home") v=0; else if(ev.key==="End") v=Math.round(horizon(S.eps0,S.gamma,S.leff,S.alpha))+5;
+  dn.value=clamp(v,0,200); renderVerdict(); updateHash();
+});
 
 function renderStats(){
   const dstar=horizon(S.eps0,S.gamma,S.leff,S.alpha);
@@ -1016,8 +1047,8 @@ function cmpHover(ev){
   cmpTip.style.top=clamp(my-10,4,cmpGeom.H-rows.length*22-40)+"px";
 }
 function cmpLeave(){ cmpHoverD=null; cmpTip.style.opacity=0; drawCompare(); }
-cmpCv.addEventListener("mousemove", cmpHover);
-cmpCv.addEventListener("mouseleave", cmpLeave);
+cmpCv.addEventListener("pointermove", cmpHover);
+cmpCv.addEventListener("pointerleave", cmpLeave);
 
 /* ===========================================================================
  * Section 3 — Cost vs accuracy
