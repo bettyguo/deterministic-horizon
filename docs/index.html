@@ -400,7 +400,7 @@
     <div class="model-toggles" id="cmpToggles" role="group" aria-label="Toggle model curves"></div>
     <div class="canvas-wrap">
       <canvas id="cmpPlot" width="1100" height="440" aria-label="Decay curves for every model preset"></canvas>
-      <div id="cmpTip" class="" style="position:absolute;pointer-events:none;opacity:0"></div>
+      <div id="cmpTip" role="status" aria-live="polite" style="position:absolute;pointer-events:none;opacity:0"></div>
     </div>
     <p class="hint" style="margin-top:10px">Curves use each model's paper <span class="mono">d*</span> with γ=0.15 and the
        calibrated <span class="mono">L_eff</span> (so each crosses 50% exactly at its horizon). The dashed line is the
@@ -674,7 +674,11 @@ function horizon(eps0, gamma, leff, alpha){
 
 const el = id => document.getElementById(id);
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
-function cssVar(n){return getComputedStyle(document.body).getPropertyValue(n).trim();}
+// memoised theme-colour reads — getComputedStyle is a reflow; cache per theme.
+let _cssCache={};
+function cssVar(n){ const c=_cssCache[n]; if(c!==undefined) return c;
+  return (_cssCache[n]=getComputedStyle(document.body).getPropertyValue(n).trim()); }
+function invalidateThemeCache(){ _cssCache={}; }
 
 function toast(msg){
   const t = el("toast"); t.textContent = msg; t.classList.add("show");
@@ -893,6 +897,7 @@ function render(){ renderStats(); renderVerdict(); renderSens(); }
 el("themeBtn").addEventListener("click",()=>{
   const b=document.body; b.dataset.theme = b.dataset.theme==="dark"?"light":"dark";
   try{ localStorage.setItem("dh-theme", b.dataset.theme); }catch(_){}
+  invalidateThemeCache();
   render(); drawCompare(); drawCost(); renderPlan();
 });
 el("resetBtn").addEventListener("click",()=>{
@@ -911,9 +916,16 @@ el("shareBtn").addEventListener("click",async()=>{
 el("copyPyBtn").addEventListener("click",async()=>{
   const d=+el("depth").value;
   const model = presetSel.value==="custom" ? "default" : presetSel.value;
+  // For a custom (ε₀, L_eff) point there is no model preset, so emit runnable
+  // code against the public expected_neural_accuracy(...) API — should_delegate
+  // takes a model, not raw decoherence params, so the old snippet didn't run.
+  const accNow=pCorrect(d,S.eps0,S.gamma,S.leff);
+  const delegateNow = accNow<S.alpha || (S.tool-accNow)>0.10;
   const py = presetSel.value==="custom"
-    ? `from deterministic_horizon import should_delegate\n`+
-      `should_delegate(estimated_depth=${d}, eps0=${S.eps0.toFixed(3)}, l_eff=${Math.round(S.leff)}, tool_accuracy=${S.tool.toFixed(2)})`
+    ? `from deterministic_horizon import expected_neural_accuracy\n`+
+      `acc = expected_neural_accuracy(${d}, eps0=${S.eps0.toFixed(3)}, l_eff=${Math.round(S.leff)})\n`+
+      `delegate = acc < ${S.alpha.toFixed(2)} or (${S.tool.toFixed(2)} - acc) > 0.10\n`+
+      `# acc ≈ ${(accNow*100).toFixed(0)}%  →  ${delegateNow?"delegate":"reason"}`
     : `from deterministic_horizon import delegation_decision\n`+
       `d = delegation_decision(estimated_depth=${d}, model="${model}")\n`+
       `print(d.explain())  # → ${d>=horizon(S.eps0,S.gamma,S.leff,S.alpha)?"delegate":"reason"}`;
@@ -1282,9 +1294,9 @@ document.addEventListener("keydown",e=>{
   const r=el("quiz").getBoundingClientRect();
   if(r.bottom<0||r.top>innerHeight) return;
   const k=e.key.toLowerCase();
-  if(k==="1"||k==="r"){ answerQuiz("reason"); }
-  else if(k==="2"||k==="d"){ answerQuiz("delegate"); }
-  else if(k==="n"||k==="enter"){ loadQuiz(); }
+  if(k==="1"||k==="r"){ e.preventDefault(); answerQuiz("reason"); }
+  else if(k==="2"||k==="d"){ e.preventDefault(); answerQuiz("delegate"); }
+  else if(k==="n"||k==="enter"){ e.preventDefault(); loadQuiz(); }
 });
 
 /* ===========================================================================
