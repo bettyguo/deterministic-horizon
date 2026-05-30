@@ -122,7 +122,7 @@
   canvas{width:100%;height:auto;display:block;border-radius:8px}
   canvas:focus{outline:none}
   canvas:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-  #tooltip,#cmpTip{position:absolute;pointer-events:none;background:var(--panel-2);border:1px solid var(--line);
+  #tooltip,#cmpTip,#costTip{position:absolute;pointer-events:none;background:var(--panel-2);border:1px solid var(--line);
     border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:var(--shadow);opacity:0;transition:opacity .12s;z-index:5;min-width:120px}
   #tooltip b,#cmpTip b{font-variant-numeric:tabular-nums}
   #cmpTip{min-width:178px;line-height:1.5}
@@ -434,7 +434,7 @@
     </section>
     <section class="card viz" aria-label="Cost per correct solution versus depth">
       <h3>Relative cost per correct solution</h3>
-      <div class="canvas-wrap"><canvas id="costPlot" width="760" height="380"></canvas></div>
+      <div class="canvas-wrap"><canvas id="costPlot" width="760" height="380" aria-label="Relative cost per correct solution versus reasoning depth, for neural chain-of-thought against a flat tool cost"></canvas><div id="costTip" role="status"></div></div>
       <div class="legend">
         <span><i style="border-color:var(--neural)"></i>Neural CoT (cost ÷ accuracy)</span>
         <span><i style="border-color:var(--tool);border-top-style:dashed"></i>Tool (flat)</span>
@@ -1066,6 +1066,7 @@ cmpCv.addEventListener("pointerleave", cmpLeave);
  * Section 3 — Cost vs accuracy
  * ======================================================================== */
 const costCv=el("costPlot"), costCtx=costCv.getContext("2d");
+let costGeom=null;
 const CST={ctool:1.5, cretry:2};
 function syncCost(){
   el("ctoolv").textContent=CST.ctool.toFixed(1)+"×";
@@ -1076,6 +1077,23 @@ function syncCost(){
 }
 el("ctool").addEventListener("input",e=>{CST.ctool=+e.target.value; syncCost(); drawCost();});
 el("cretry").addEventListener("input",e=>{CST.cretry=+e.target.value; syncCost(); drawCost();});
+
+// hover/touch probe on the cost chart — the only chart that lacked one
+const costTip=el("costTip");
+costCv.addEventListener("pointermove", ev=>{
+  if(!costGeom) return;
+  const r=costCv.getBoundingClientRect(), mx=ev.clientX-r.left;
+  const {m,pw,Dmax,ymax,y,toolC,H,W}=costGeom;
+  if(mx<m.l||mx>m.l+pw){ costTip.style.opacity=0; return; }
+  const d=Math.max(1, clamp((mx-m.l)/pw*Dmax, 0, Dmax));
+  const nc=neuralCostPerCorrect(d), ratio=nc/toolC;
+  costTip.style.opacity=1;
+  costTip.style.left=clamp(mx+12,0,W-170)+"px";
+  costTip.style.top=clamp(y(Math.min(nc,ymax))-54,4,H-66)+"px";
+  costTip.innerHTML=`depth <b>d=${d.toFixed(0)}</b><br>neural <b>${nc.toFixed(1)}×</b> · tool <b>${toolC.toFixed(1)}×</b>`+
+    `<br><span style="color:${ratio>1?'var(--neural)':'var(--tool)'}">${ratio>=1?ratio.toFixed(1)+"× costlier than tool":"tool not cheaper yet"}</span>`;
+});
+costCv.addEventListener("pointerleave", ()=>{ costTip.style.opacity=0; });
 
 // neural cost per correct ≈ (depth steps × retries) / accuracy ; tool ≈ ctool (flat), accuracy ~ tool
 function neuralCostPerCorrect(d){
@@ -1098,6 +1116,7 @@ function drawCost(){
   for(let d=1;d<=Dmax;d++){ ymax=Math.max(ymax, neuralCostPerCorrect(d)); }
   ymax=Math.min(ymax, toolC*30); // clamp display
   const x=d=>m.l + d/Dmax*pw, y=c=>m.t + (1-clamp(c/ymax,0,1))*ph;
+  costGeom={m,pw,Dmax,ymax,x,y,toolC,H,W};
 
   costCtx.strokeStyle=grid; costCtx.fillStyle=muted; costCtx.lineWidth=1; costCtx.font="11px system-ui";
   costCtx.textAlign="center"; costCtx.textBaseline="top";
