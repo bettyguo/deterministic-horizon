@@ -17,8 +17,10 @@ from deterministic_horizon.models.base import BaseModel, ModelResponse
 if TYPE_CHECKING:  # pragma: no cover
     from deterministic_horizon.models.anthropic_models import AnthropicModel
     from deterministic_horizon.models.deepseek_models import DeepSeekModel
+    from deterministic_horizon.models.gemini_models import GeminiModel
     from deterministic_horizon.models.local_models import LocalModel
     from deterministic_horizon.models.openai_models import OpenAIModel
+    from deterministic_horizon.models.together_models import TogetherModel
 
 
 # Lightweight registry: maps a normalised model-name fragment → "module:class"
@@ -40,6 +42,18 @@ _REGISTRY: dict[str, tuple[str, str]] = {
     # DeepSeek
     "deepseek-r1": ("deterministic_horizon.models.deepseek_models", "DeepSeekModel"),
     "deepseek-v3": ("deterministic_horizon.models.deepseek_models", "DeepSeekModel"),
+    # Google Gemini (OpenAI-compatible endpoint)
+    "gemini-2.5-pro": ("deterministic_horizon.models.gemini_models", "GeminiModel"),
+    "gemini-2.0-flash": ("deterministic_horizon.models.gemini_models", "GeminiModel"),
+    "gemini-2.0-pro": ("deterministic_horizon.models.gemini_models", "GeminiModel"),
+    "gemini-1.5-pro": ("deterministic_horizon.models.gemini_models", "GeminiModel"),
+    "gemini-1.5-flash": ("deterministic_horizon.models.gemini_models", "GeminiModel"),
+    # Together AI (open-weight, OpenAI-compatible endpoint)
+    "together-llama-3.3-70b": ("deterministic_horizon.models.together_models", "TogetherModel"),
+    "together-llama-3.1-8b": ("deterministic_horizon.models.together_models", "TogetherModel"),
+    "together-qwen-2.5-72b": ("deterministic_horizon.models.together_models", "TogetherModel"),
+    "together-qwen-2.5-7b": ("deterministic_horizon.models.together_models", "TogetherModel"),
+    "together-deepseek-r1": ("deterministic_horizon.models.together_models", "TogetherModel"),
     # Local / open weight (paper's open-weight suite)
     "llama-3.3-70b": ("deterministic_horizon.models.local_models", "LocalModel"),
     "llama-3.1-8b": ("deterministic_horizon.models.local_models", "LocalModel"),
@@ -86,10 +100,15 @@ def load_model(
     """
     normalised = model_name.lower().replace("_", "-")
     matched: str | None = None
-    for registered in _REGISTRY:
-        if registered in normalised or normalised in registered:
-            matched = registered
-            break
+    # Prefer an exact match so specific ids (e.g. "llama-3.1-8b" vs.
+    # "together-llama-3.1-8b") never collide via loose substring matching.
+    if normalised in _REGISTRY:
+        matched = normalised
+    else:
+        for registered in _REGISTRY:
+            if registered in normalised or normalised in registered:
+                matched = registered
+                break
 
     if matched is None:
         available = ", ".join(sorted(_REGISTRY))
@@ -111,6 +130,12 @@ def __getattr__(name: str):
             "deterministic_horizon.models.deepseek_models",
             "DeepSeekModel",
         ),
+        "GeminiModel": ("deterministic_horizon.models.gemini_models", "GeminiModel"),
+        "TogetherModel": ("deterministic_horizon.models.together_models", "TogetherModel"),
+        "OpenAICompatibleModel": (
+            "deterministic_horizon.models.openai_compatible",
+            "OpenAICompatibleModel",
+        ),
         "LocalModel": ("deterministic_horizon.models.local_models", "LocalModel"),
     }
     if name in lazy:
@@ -128,6 +153,9 @@ __all__ = [
     "OpenAIModel",
     "AnthropicModel",
     "DeepSeekModel",
+    "GeminiModel",
+    "TogetherModel",
+    "OpenAICompatibleModel",
     "LocalModel",
     "load_model",
     "MODEL_REGISTRY",

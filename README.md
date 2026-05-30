@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/lint-ruff-46aef7.svg)](https://github.com/astral-sh/ruff)
-[![Tests](https://img.shields.io/badge/tests-32%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-48%20passing-brightgreen.svg)](tests/)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bettyguo/deterministic-horizon/blob/main/notebooks/01_quickstart.ipynb)
 [![Live demo](https://img.shields.io/badge/live%20demo-interactive%20explorer-8a4fff.svg)](https://bettyguo.github.io/deterministic-horizon/)
 
@@ -190,7 +190,7 @@ deterministic-horizon/
 ├── src/
 │   ├── policy.py        # should_delegate / delegation_decision  ← the engineering hook
 │   ├── tasks/           # PermutationProbe, FSA-Sim, ArithChain (+ BFS oracle)
-│   ├── models/          # Uniform interface: OpenAI / Anthropic / DeepSeek / local
+│   ├── models/          # Uniform interface: OpenAI / Anthropic / DeepSeek / Gemini / Together / local
 │   ├── metrics/         # SSJ, SFE, super-exponential horizon fit, bootstrap CIs
 │   ├── analysis.py      # Figure + table generation
 │   ├── runners.py       # High-level evaluate(...) Python API
@@ -265,7 +265,7 @@ A [`CITATION.cff`](CITATION.cff) is included, so GitHub's "Cite this repository"
 Bug reports, new tasks, and extensions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md); issue templates and a PR checklist are wired up under [`.github/`](.github/). Research directions (help wanted):
 
 - [ ] SWE-Bench-State / WebArena-Nav / SQL-Multi adapters
-- [ ] Gemini and Together adapters
+- [x] Gemini and Together adapters — OpenAI-compatible, in [`src/models/`](src/models/)
 - [ ] Mamba / RWKV / MoE decoherence study
 - [x] Interactive horizon visualiser — [live explorer](https://bettyguo.github.io/deterministic-horizon/) ([source](docs/index.html))
 

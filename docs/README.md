@@ -31,7 +31,7 @@ takeaway: **estimate the depth of your subproblem; past d\*, hand off.**
 src/
 ├── policy.py        should_delegate / delegation_decision   ← the engineering hook
 ├── tasks/           PermutationProbe · FSA-Sim · ArithChain (+ BFS oracle)
-├── models/          OpenAI / Anthropic / DeepSeek / local adapters
+├── models/          OpenAI / Anthropic / DeepSeek / Gemini / Together / local
 ├── metrics/         SSJ · SFE · super-exponential horizon fit · bootstrap CIs
 ├── analysis.py      figure + table generation
 ├── runners.py       high-level evaluate(...) API
