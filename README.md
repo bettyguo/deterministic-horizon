@@ -1,4 +1,3 @@
-@ -1,289 +0,0 @@
 <div align="center">
 
 # 🧭 The Deterministic Horizon
@@ -13,6 +12,7 @@
 [![Code style: ruff](https://img.shields.io/badge/lint-ruff-46aef7.svg)](https://github.com/astral-sh/ruff)
 [![Tests](https://img.shields.io/badge/tests-32%20passing-brightgreen.svg)](tests/)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bettyguo/deterministic-horizon/blob/main/notebooks/01_quickstart.ipynb)
+[![Live demo](https://img.shields.io/badge/live%20demo-interactive%20explorer-8a4fff.svg)](https://bettyguo.github.io/deterministic-horizon/)
 
 <br/>
 
@@ -143,7 +143,7 @@ $$|\mathcal{S}_{\text{track}}| \le c(\delta,\rho_{\max})\cdot 2^{\,H\,\log_2(L/H
 
 $$d^* = \frac{-\varepsilon_0 L_{\text{eff}} + \sqrt{\varepsilon_0^2 L_{\text{eff}}^2 + 2\gamma L_{\text{eff}}\ln(1/\alpha)}}{\gamma}$$
 
-A fourth result (Theorem 4.7) bounds fine-tuning recovery by $O(d^*/d)$ — the architectural ceiling. Proofs are in the appendix; the formulas live in [`policy.py`](src/deterministic_horizon/policy.py) and [`metrics/statistics.py`](src/deterministic_horizon/metrics/statistics.py).
+A fourth result (Theorem 4.7) bounds fine-tuning recovery by $O(d^*/d)$ — the architectural ceiling. Proofs are in the appendix; the formulas live in [`policy.py`](src/policy.py) and [`metrics/statistics.py`](src/metrics/statistics.py).
 
 ---
 
@@ -267,7 +267,7 @@ Bug reports, new tasks, and extensions are welcome. See [`CONTRIBUTING.md`](CONT
 - [ ] SWE-Bench-State / WebArena-Nav / SQL-Multi adapters
 - [ ] Gemini and Together adapters
 - [ ] Mamba / RWKV / MoE decoherence study
-- [ ] Interactive horizon visualiser (Hugging Face Space)
+- [x] Interactive horizon visualiser — [live explorer](https://bettyguo.github.io/deterministic-horizon/) ([source](docs/index.html))
 
 ---
 
@@ -276,7 +276,7 @@ Bug reports, new tasks, and extensions are welcome. See [`CONTRIBUTING.md`](CONT
 **The Deterministic Horizon isn't a soft suggestion — it's a wall.**
 If your next subproblem is ≳ 20 deterministic state-tracking steps, delegate.
 
-[Paper](paper/ICML2026_DeterministicHorizon_CameraReady.pdf) · [Docs](docs/README.md) · [When to delegate](docs/when-to-delegate.md) · [Quickstart notebook](notebooks/01_quickstart.ipynb) · [Issues](https://github.com/bettyguo/deterministic-horizon/issues)
+[Paper](paper/ICML2026_DeterministicHorizon_CameraReady.pdf) · [Docs](docs/README.md) · [When to delegate](docs/when-to-delegate.md) · [Interactive explorer](https://bettyguo.github.io/deterministic-horizon/) · [Quickstart notebook](notebooks/01_quickstart.ipynb) · [Issues](https://github.com/bettyguo/deterministic-horizon/issues)
 
 </div>
 

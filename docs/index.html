@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Deterministic Horizon — Interactive Explorer</title>
+<meta name="description" content="Interactive explorer for the Deterministic Horizon (ICML 2026): drag ε₀, γ, L_eff and α to watch chain-of-thought accuracy decay and solve for d* in real time." />
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b22; --panel-2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2b3441; --accent:#4ea1ff; --neural:#ff5d52; --tool:#34c759; --horizon:#ffb454;
+    --grid:#222b36; --shadow:0 8px 30px rgba(0,0,0,.35);
+  }
+  [data-theme="light"]{
+    --bg:#f6f8fa; --panel:#ffffff; --panel-2:#f0f3f7; --ink:#1a2027; --muted:#5b6773;
+    --line:#e1e7ee; --accent:#1f5fb4; --neural:#d6332e; --tool:#2a9d2a; --horizon:#d98b00;
+    --grid:#e8edf3; --shadow:0 8px 30px rgba(20,40,80,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased; transition:background .25s,color .25s;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  header{max-width:1180px;margin:0 auto;padding:30px 22px 6px}
+  .eyebrow{letter-spacing:.14em;text-transform:uppercase;font-size:11.5px;color:var(--muted);font-weight:700}
+  h1{margin:.18em 0 .1em;font-size:30px;line-height:1.15;letter-spacing:-.01em}
+  h1 .compass{filter:saturate(1.2)}
+  .sub{color:var(--muted);max-width:720px;margin:.2em 0 0}
+  .wrap{max-width:1180px;margin:14px auto 60px;padding:0 22px;
+        display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+  @media (max-width:900px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .controls{padding:18px 18px 6px;position:sticky;top:14px}
+  .controls h2,.viz h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px}
+  .row{margin:0 0 16px}
+  .row label{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;margin-bottom:6px}
+  .row label .val{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700}
+  .row .hint{font-size:12px;color:var(--muted);font-weight:400}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;
+    background:linear-gradient(90deg,var(--accent) var(--pct,40%),var(--line) var(--pct,40%));outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+    background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer}
+  select{width:100%;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:inherit}
+  .viz{padding:16px 18px 20px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 14px}
+  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:12px 13px}
+  .stat .k{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .stat .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:3px}
+  .stat .v small{font-size:13px;font-weight:600;color:var(--muted)}
+  canvas{width:100%;height:auto;display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 2px 0;font-size:13px;color:var(--muted)}
+  .legend i{display:inline-block;width:22px;height:0;border-top-width:3px;border-top-style:solid;vertical-align:middle;margin-right:6px;border-radius:2px}
+  .calc{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+  .calc .field{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .calc input[type=number]{width:90px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:inherit}
+  .verdict{margin-top:12px;padding:13px 15px;border-radius:11px;font-weight:600;border:1px solid transparent;line-height:1.45}
+  .verdict.delegate{background:color-mix(in srgb,var(--neural) 16%,transparent);border-color:var(--neural)}
+  .verdict.reason{background:color-mix(in srgb,var(--tool) 14%,transparent);border-color:var(--tool)}
+  .verdict .tag{display:inline-block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:999px;color:#fff;margin-right:8px;vertical-align:middle}
+  .verdict.delegate .tag{background:var(--neural)} .verdict.reason .tag{background:var(--tool)}
+  .toolbar{position:absolute;top:18px;right:22px;display:flex;gap:8px}
+  .btn{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:7px 12px;font:inherit;font-size:13px}
+  .btn:hover{border-color:var(--accent)}
+  .eq{font-family:"SFMono-Regular",Consolas,Menlo,monospace;background:var(--panel-2);border:1px solid var(--line);
+      border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--muted);overflow-x:auto;margin:4px 0 0}
+  footer{max-width:1180px;margin:0 auto;padding:0 22px 50px;color:var(--muted);font-size:13px}
+  footer code{background:var(--panel-2);padding:1px 6px;border-radius:5px}
+  .pill{display:inline-block;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--muted);margin-right:6px}
+</style>
+</head>
+<body data-theme="dark">
+  <div class="toolbar">
+    <button class="btn" id="themeBtn" title="Toggle light / dark">◐ Theme</button>
+    <a class="btn" href="https://github.com/bettyguo/deterministic-horizon" target="_blank" rel="noopener">★ GitHub</a>
+  </div>
+
+  <header>
+    <div class="eyebrow">ICML 2026 · Interactive</div>
+    <h1><span class="compass">🧭</span> The Deterministic Horizon — Explorer</h1>
+    <p class="sub">Drag the decoherence parameters and watch neural chain-of-thought accuracy decay
+       with reasoning depth. The <b>Deterministic Horizon</b> <i>d*</i> — where accuracy crosses your
+       threshold — is solved in closed form, live. Past it, tool delegation wins.</p>
+  </header>
+
+  <div class="wrap">
+    <!-- CONTROLS -->
+    <section class="card controls">
+      <h2>Decoherence parameters</h2>
+
+      <div class="row">
+        <label for="preset">Model preset <span class="hint">paper Table 3/5</span></label>
+        <select id="preset">
+          <option value="custom">— custom —</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label for="eps0">ε₀ · baseline per-step error <span class="val" id="eps0v"></span></label>
+        <input type="range" id="eps0" min="0.005" max="0.05" step="0.001" />
+        <div class="hint">paper MLE 0.020 · 95% CI [0.017, 0.023]</div>
+      </div>
+
+      <div class="row">
+        <label for="gamma">γ · attention decay rate <span class="val" id="gammav"></span></label>
+        <input type="range" id="gamma" min="0.02" max="0.40" step="0.005" />
+        <div class="hint">shared across models · paper 0.15</div>
+      </div>
+
+      <div class="row">
+        <label for="leff">L_eff · effective decoherence length <span class="val" id="leffv"></span></label>
+        <input type="range" id="leff" min="40" max="600" step="1" />
+        <div class="hint">O(10²) steps — <i>not</i> the raw context window O(10⁵)</div>
+      </div>
+
+      <div class="row">
+        <label for="alpha">α · success threshold <span class="val" id="alphav"></span></label>
+        <input type="range" id="alpha" min="0.1" max="0.9" step="0.01" />
+        <div class="hint">depth where P(correct)=α defines d*</div>
+      </div>
+
+      <div class="row">
+        <label for="tool">tool accuracy (C3) <span class="val" id="toolv"></span></label>
+        <input type="range" id="tool" min="0.5" max="1.0" step="0.01" />
+        <div class="hint">empirical C3 mean ≈ 0.92</div>
+      </div>
+    </section>
+
+    <!-- VISUAL -->
+    <section class="card viz">
+      <h2>Accuracy vs. reasoning depth</h2>
+      <div class="stats">
+        <div class="stat"><div class="k">Deterministic Horizon</div><div class="v" id="dstar">—</div></div>
+        <div class="stat"><div class="k">P(correct) at d*</div><div class="v" id="patd">—</div></div>
+        <div class="stat"><div class="k">Tool advantage past d*</div><div class="v" id="adv">—</div></div>
+      </div>
+
+      <canvas id="plot" width="760" height="420" aria-label="Accuracy decay curve"></canvas>
+      <div class="legend">
+        <span><i style="border-color:var(--neural)"></i>Neural CoT  P(d)=exp(−dε₀−γd(d+1)/2L_eff)</span>
+        <span><i style="border-color:var(--tool);border-top-style:dashed"></i>Tool-integrated (C3)</span>
+        <span><i style="border-color:var(--horizon);border-top-style:dotted"></i>Horizon d*</span>
+      </div>
+
+      <!-- DELEGATION CALCULATOR -->
+      <div class="calc">
+        <h2>Delegation decision</h2>
+        <div class="field">
+          <span>If my next subproblem is</span>
+          <input type="number" id="depth" min="0" max="200" value="30" />
+          <span>state-tracking steps deep →</span>
+        </div>
+        <div class="verdict" id="verdict"></div>
+        <div class="eq" id="eqline"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <p><span class="pill">offline</span><span class="pill">no dependencies</span>
+       Mirrors <code>deterministic_horizon.policy</code> exactly:
+       <code>expected_neural_accuracy</code>, <code>horizon_for</code>, <code>should_delegate</code>.</p>
+    <p>Read the <a href="https://github.com/bettyguo/deterministic-horizon/blob/main/docs/when-to-delegate.md">delegation guide</a> ·
+       <a href="https://github.com/bettyguo/deterministic-horizon/blob/main/docs/theorem-cheatsheet.md">theorem cheat-sheet</a> ·
+       <a href="https://github.com/bettyguo/deterministic-horizon#readme">project README</a> ·
+       <a href="https://github.com/bettyguo/deterministic-horizon">source</a>.
+       Theory: Definition 4.1 / Theorems 4.2 &amp; 4.5.</p>
+  </footer>
+
+<script>
+"use strict";
+// ----- Paper-canonical math (1:1 with src/policy.py) -----------------------
+const GAMMA_DEFAULT = 0.15;
+// Per-model (ε₀, d*) from policy._MODEL_EPS0_DSTAR
+const MODELS = {
+  "gpt-4o":          [0.020, 22.0],
+  "claude-4.5-opus": [0.018, 27.0],
+  "o3-mini":         [0.014, 31.0],
+  "deepseek-r1":     [0.015, 29.0],
+  "llama-3.1-8b":    [0.022, 20.0],
+  "llama-3.3-70b":   [0.018, 28.0],
+  "qwen-2.5-7b":     [0.023, 19.0],
+  "qwen-2.5-72b":    [0.018, 28.0],
+  "default":         [0.020, 24.0],
+};
+const TOOL_DEFAULT = 0.92, ALPHA_DEFAULT = 0.5;
+
+// P(correct at depth d) — Theorem 4.2
+function pCorrect(d, eps0, gamma, leff){
+  return Math.exp(-d*eps0 - gamma*d*(d+1)/(2*leff));
+}
+// L_eff that makes the curve cross α exactly at d* (policy._l_eff_for)
+function lEffFor(eps0, dstar, alpha){
+  const denom = Math.log(1/alpha) - eps0*dstar;
+  return GAMMA_DEFAULT*dstar*(dstar+1)/(2*denom);
+}
+// Deterministic Horizon closed form — Theorem 4.5
+function horizon(eps0, gamma, leff, alpha){
+  const disc = eps0*eps0*leff*leff + 2*gamma*leff*Math.log(1/alpha);
+  return (-eps0*leff + Math.sqrt(disc))/gamma;
+}
+
+// ----- State ---------------------------------------------------------------
+const S = {eps0:0.020, gamma:0.15, leff:lEffFor(0.020,22.0,0.5), alpha:0.5, tool:0.92};
+
+// ----- Wire up controls ----------------------------------------------------
+const el = id => document.getElementById(id);
+const presetSel = el("preset");
+for(const name of Object.keys(MODELS)){
+  const o=document.createElement("option");
+  o.value=name; o.textContent=name; presetSel.appendChild(o);
+}
+presetSel.value="gpt-4o";
+
+const sliders = {
+  eps0:{node:el("eps0"),lbl:el("eps0v"),fmt:v=>v.toFixed(3)},
+  gamma:{node:el("gamma"),lbl:el("gammav"),fmt:v=>v.toFixed(3)},
+  leff:{node:el("leff"),lbl:el("leffv"),fmt:v=>Math.round(v)},
+  alpha:{node:el("alpha"),lbl:el("alphav"),fmt:v=>v.toFixed(2)},
+  tool:{node:el("tool"),lbl:el("toolv"),fmt:v=>Math.round(v*100)+"%"},
+};
+function syncSlider(key){
+  const s=sliders[key]; s.node.value=S[key];
+  s.lbl.textContent=s.fmt(S[key]);
+  const min=+s.node.min, max=+s.node.max;
+  s.node.style.setProperty("--pct", ((S[key]-min)/(max-min)*100)+"%");
+}
+function applyPreset(name){
+  if(name==="custom") return;
+  const [eps0,dstar]=MODELS[name];
+  S.eps0=eps0; S.gamma=GAMMA_DEFAULT; S.alpha=0.5;
+  S.leff=lEffFor(eps0,dstar,0.5);
+  for(const k of Object.keys(sliders)) syncSlider(k);
+  render();
+}
+presetSel.addEventListener("change",e=>applyPreset(e.target.value));
+
+for(const key of Object.keys(sliders)){
+  sliders[key].node.addEventListener("input",e=>{
+    S[key]=+e.target.value; sliders[key].lbl.textContent=sliders[key].fmt(S[key]);
+    const min=+e.target.min,max=+e.target.max;
+    e.target.style.setProperty("--pct",((S[key]-min)/(max-min)*100)+"%");
+    presetSel.value="custom"; render();
+  });
+}
+el("depth").addEventListener("input",renderVerdict);
+el("themeBtn").addEventListener("click",()=>{
+  const b=document.body; b.dataset.theme = b.dataset.theme==="dark"?"light":"dark"; render();
+});
+
+// ----- Canvas plot ---------------------------------------------------------
+const cv=el("plot"), ctx=cv.getContext("2d");
+function cssVar(n){return getComputedStyle(document.body).getPropertyValue(n).trim();}
+function drawPlot(){
+  const DPR=window.devicePixelRatio||1, W=cv.clientWidth||760, H=420;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
+  const m={l:52,r:18,t:16,b:42}, pw=W-m.l-m.r, ph=H-m.t-m.b;
+  const Dmax=Math.max(50, Math.ceil((S.leff>0?horizon(S.eps0,S.gamma,S.leff,0.05):50)/10)*10);
+  const x=d=>m.l + d/Dmax*pw, y=p=>m.t + (1-p)*ph;
+  const ink=cssVar("--ink"),muted=cssVar("--muted"),grid=cssVar("--grid"),
+        neural=cssVar("--neural"),tool=cssVar("--tool"),hz=cssVar("--horizon");
+
+  // grid + axes
+  ctx.strokeStyle=grid; ctx.fillStyle=muted; ctx.lineWidth=1; ctx.font="11px system-ui";
+  ctx.textAlign="right"; ctx.textBaseline="middle";
+  for(let p=0;p<=1;p+=0.25){ const yy=y(p); ctx.beginPath();ctx.moveTo(m.l,yy);ctx.lineTo(W-m.r,yy);ctx.stroke();
+    ctx.fillText((p*100).toFixed(0)+"%",m.l-8,yy); }
+  ctx.textAlign="center"; ctx.textBaseline="top";
+  for(let d=0;d<=Dmax;d+=10){ const xx=x(d); ctx.beginPath();ctx.moveTo(xx,m.t);ctx.lineTo(xx,H-m.b);ctx.strokeStyle=grid;ctx.stroke();
+    ctx.fillStyle=muted; ctx.fillText(d,xx,H-m.b+6); }
+  ctx.fillStyle=muted; ctx.fillText("reasoning depth  d",m.l+pw/2,H-m.b+22);
+
+  // tool line
+  ctx.strokeStyle=tool; ctx.setLineDash([7,5]); ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(m.l,y(S.tool));ctx.lineTo(W-m.r,y(S.tool));ctx.stroke(); ctx.setLineDash([]);
+
+  // threshold line
+  ctx.strokeStyle=muted; ctx.globalAlpha=.5; ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(m.l,y(S.alpha));ctx.lineTo(W-m.r,y(S.alpha));ctx.stroke(); ctx.globalAlpha=1;
+
+  // neural decay curve (filled)
+  ctx.beginPath();
+  for(let i=0;i<=pw;i++){ const d=i/pw*Dmax, p=pCorrect(d,S.eps0,S.gamma,S.leff);
+    i?ctx.lineTo(x(d),y(p)):ctx.moveTo(x(d),y(p)); }
+  ctx.lineTo(x(Dmax),y(0)); ctx.lineTo(x(0),y(0)); ctx.closePath();
+  ctx.fillStyle=neural; ctx.globalAlpha=.10; ctx.fill(); ctx.globalAlpha=1;
+  ctx.beginPath();
+  for(let i=0;i<=pw;i++){ const d=i/pw*Dmax, p=pCorrect(d,S.eps0,S.gamma,S.leff);
+    i?ctx.lineTo(x(d),y(p)):ctx.moveTo(x(d),y(p)); }
+  ctx.strokeStyle=neural; ctx.lineWidth=2.6; ctx.stroke();
+
+  // horizon marker
+  const dstar=horizon(S.eps0,S.gamma,S.leff,S.alpha);
+  if(isFinite(dstar)&&dstar>0&&dstar<=Dmax){
+    ctx.strokeStyle=hz; ctx.setLineDash([3,3]); ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(x(dstar),m.t);ctx.lineTo(x(dstar),H-m.b);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=hz; ctx.beginPath();ctx.arc(x(dstar),y(S.alpha),5,0,7);ctx.fill();
+    ctx.textAlign="left"; ctx.font="bold 13px system-ui";
+    ctx.fillText("d* = "+dstar.toFixed(1), x(dstar)+8, m.t+10);
+  }
+  // user-depth marker
+  const ud=+el("depth").value;
+  if(ud>=0&&ud<=Dmax){ const px=x(ud),py=y(pCorrect(ud,S.eps0,S.gamma,S.leff));
+    ctx.fillStyle=ink; ctx.beginPath();ctx.arc(px,py,4,0,7);ctx.fill();
+    ctx.strokeStyle=ink; ctx.globalAlpha=.3;ctx.setLineDash([2,3]);
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,H-m.b);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+  }
+}
+
+// ----- Stats + verdict -----------------------------------------------------
+function renderStats(){
+  const dstar=horizon(S.eps0,S.gamma,S.leff,S.alpha);
+  el("dstar").innerHTML = (isFinite(dstar)&&dstar>0)? dstar.toFixed(1)+' <small>steps</small>' : '—';
+  el("patd").innerHTML = (S.alpha*100).toFixed(0)+'<small>%</small>';
+  const past = Math.max(0, S.tool - pCorrect(dstar+5,S.eps0,S.gamma,S.leff));
+  el("adv").innerHTML = '+'+(past*100).toFixed(0)+'<small> pts @ d*+5</small>';
+}
+function renderVerdict(){
+  const d=+el("depth").value;
+  const neural=pCorrect(d,S.eps0,S.gamma,S.leff);
+  const margin=0.10, threshold=S.alpha;
+  let delegate=false, reason="";
+  if(neural<threshold){ delegate=true; reason="above_horizon"; }
+  else if(S.tool-neural>margin){ delegate=true; reason="tool_dominates_by_margin"; }
+  else { reason="below_horizon"; }
+  const v=el("verdict");
+  v.className="verdict "+(delegate?"delegate":"reason");
+  v.innerHTML = `<span class="tag">${delegate?"delegate":"reason neurally"}</span>`+
+    `At depth <b>d=${d}</b>, expected neural accuracy is <b>${(neural*100).toFixed(0)}%</b> `+
+    `vs. <b>${(S.tool*100).toFixed(0)}%</b> via tools. `+
+    (delegate
+      ? (reason==="above_horizon" ? "Past the horizon — thinking harder is a coin flip. <b>Hand off.</b>"
+                                  : "Tool dominates by &gt;10 pts — don't burn tokens to break even. <b>Hand off.</b>")
+      : "Below the horizon — extended reasoning is reliable here. <b>Keep reasoning.</b>");
+  el("eqline").textContent =
+    `should_delegate(estimated_depth=${d}, eps0=${S.eps0.toFixed(3)}, l_eff=${Math.round(S.leff)}) → ${delegate}   #reason=${reason}`;
+  drawPlot();
+}
+function render(){ renderStats(); renderVerdict(); /* draws plot */ }
+
+// ----- Init ----------------------------------------------------------------
+for(const k of Object.keys(sliders)) syncSlider(k);
+applyPreset("gpt-4o");
+window.addEventListener("resize",render);
+</script>
+</body>
+</html>

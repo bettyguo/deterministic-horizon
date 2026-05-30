@@ -15,10 +15,14 @@ depth (= inversion count under adjacent transpositions), so no instance exceeds
 the S_8 diameter of 28.
 
 Usage:
-    PYTHONPATH=src python scripts/regenerate_sample_data.py
+    python scripts/regenerate_sample_data.py            # data + results (default)
+    python scripts/regenerate_sample_data.py --figures  # + assets/ & analysis/ PNGs
+    python scripts/regenerate_sample_data.py --tables   # + analysis/*.{md,json}
+    python scripts/regenerate_sample_data.py --all      # everything
 """
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import random
@@ -69,7 +73,8 @@ def simulate_neural_cot(task: PermutationTask, instance, rng: random.Random) -> 
     return task.state_equal(state, instance.target_state)
 
 
-def main() -> None:
+def regenerate_data() -> list[dict]:
+    """Write data/sample + results/sample and return the results list."""
     task = PermutationTask(seed=SEED, n_elements=N_ELEMENTS)
     sim_rng = random.Random(SEED)
 
@@ -117,6 +122,52 @@ def main() -> None:
     print(f"Wrote {len(instances)} instances -> {DATA_PATH.relative_to(ROOT)}")
     print(f"Wrote {len(results)} results   -> {RESULTS_PATH.relative_to(ROOT)}")
     print(f"Overall C1 accuracy: {acc:.1%} (depths {DEPTHS})")
+    return results
+
+
+def _load_results() -> list[dict]:
+    if RESULTS_PATH.exists():
+        return json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
+    return regenerate_data()
+
+
+def regenerate_figures(results: list[dict] | None = None) -> None:
+    """Regenerate the paper figures into assets/ (hero images) and analysis/."""
+    from deterministic_horizon import generate_figures
+
+    results = results if results is not None else _load_results()
+    for out_dir in ("assets", "analysis"):
+        paths = generate_figures(results, output_dir=ROOT / out_dir, dpi=200)
+        for p in paths:
+            print(f"Wrote figure -> {Path(p).relative_to(ROOT)}")
+
+
+def regenerate_tables(results: list[dict] | None = None) -> None:
+    """Regenerate analysis/*.{md,json} (accuracy-by-depth, conditions, horizon)."""
+    from deterministic_horizon import generate_tables
+
+    results = results if results is not None else _load_results()
+    paths = generate_tables(results, output_dir=ROOT / "analysis")
+    for p in paths.values():
+        print(f"Wrote table -> {Path(p).relative_to(ROOT)}")
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--figures", action="store_true", help="Regenerate PNG figures.")
+    parser.add_argument("--tables", action="store_true", help="Regenerate md/json tables.")
+    parser.add_argument("--all", action="store_true", help="Data + figures + tables.")
+    args = parser.parse_args(argv)
+
+    # Default (no flags) reproduces the original behaviour: data + results only.
+    only_artifacts = (args.figures or args.tables) and not args.all
+    results = None
+    if args.all or not only_artifacts:
+        results = regenerate_data()
+    if args.figures or args.all:
+        regenerate_figures(results)
+    if args.tables or args.all:
+        regenerate_tables(results)
 
 
 if __name__ == "__main__":
