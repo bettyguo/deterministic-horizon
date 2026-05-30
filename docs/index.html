@@ -142,7 +142,21 @@
   .verdict.delegate .tag{background:var(--neural)} .verdict.reason .tag{background:var(--tool)}
   .eq{font-family:"SFMono-Regular",Consolas,Menlo,monospace;background:var(--panel-2);border:1px solid var(--line);
       border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--muted);overflow-x:auto;margin:10px 0 0;white-space:pre}
+  /* native MathML — zero-dependency typeset equations */
+  .eq.matheq{font-family:inherit;font-size:15px;color:var(--ink);white-space:normal;overflow-x:auto;padding:12px 14px}
+  .eq.matheq math{font-size:1.08em}
   .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+  /* ---------- Sensitivity (what moves d*) ---------- */
+  .sens{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .sens h3{margin-bottom:4px}
+  .sens .cap{color:var(--muted);font-size:12px;margin:0 0 10px}
+  .sens-row{display:grid;grid-template-columns:128px 1fr auto;gap:10px;align-items:center;margin:8px 0;font-size:13px}
+  .sens-k{color:var(--muted)}
+  .sens-bar{height:9px;border-radius:6px;background:var(--panel-2);overflow:hidden}
+  .sens-bar>span{display:block;height:100%;border-radius:6px;background:linear-gradient(92deg,var(--accent),var(--accent-2));transition:width .3s cubic-bezier(.22,1,.36,1)}
+  .sens-v{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+  .sens-v b{color:var(--ink)}
 
   /* ---------- Buttons / pills ---------- */
   .btn{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:7px 12px;font:inherit;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:border-color .15s,transform .05s}
@@ -347,6 +361,14 @@
         <span><i style="border-color:var(--horizon);border-top-style:dotted"></i>Horizon d*</span>
       </div>
 
+      <!-- SENSITIVITY (what moves d*) -->
+      <div class="sens">
+        <h3>What moves the horizon?</h3>
+        <p class="cap">How far <span class="mono">d*</span> shifts when each parameter is nudged ±20% from your current
+           setting — the longest bar is the lever that matters most. Updates as you drag.</p>
+        <div id="sensRows" aria-live="polite"></div>
+      </div>
+
       <!-- DELEGATION CALCULATOR -->
       <div class="calc">
         <h3>Delegation decision</h3>
@@ -522,7 +544,15 @@
         <p>Each reasoning step isn't equally reliable. The error rate climbs the deeper you are in the chain, because
            attention's usable state resolution degrades — not at the raw context length, but at the far shorter
            <i>effective decoherence length</i> <span class="mono">L_eff</span>.</p>
-        <div class="eq">ε(d) = ε₀ + γ · d / L_eff</div>
+        <div class="eq matheq">
+          <math display="block" aria-label="epsilon of d equals epsilon-zero plus gamma times d over L-eff">
+            <mrow>
+              <mi>ε</mi><mo>(</mo><mi>d</mi><mo>)</mo><mo>=</mo>
+              <msub><mi>ε</mi><mn>0</mn></msub><mo>+</mo><mi>γ</mi><mo>·</mo>
+              <mfrac><mi>d</mi><msub><mi>L</mi><mtext>eff</mtext></msub></mfrac>
+            </mrow>
+          </math>
+        </div>
       </div>
     </div>
     <div class="step">
@@ -531,7 +561,19 @@
         <h4>Integrate it → super-exponential decay (Theorem 4.2)</h4>
         <p>Multiplying the per-step success probabilities along the chain gives a closed form. The quadratic term in
            the exponent is the "wall": accuracy doesn't fade linearly, it collapses.</p>
-        <div class="eq">P(correct at depth d) ≈ exp( −d·ε₀ − γ·d(d+1) / (2·L_eff) )</div>
+        <div class="eq matheq">
+          <math display="block" aria-label="P correct at depth d is approximately exp of minus d epsilon-zero minus gamma d times d plus 1 over 2 L-eff">
+            <mrow>
+              <mi>P</mi><mo>(</mo><mtext>correct&#160;at&#160;depth&#160;</mtext><mi>d</mi><mo>)</mo>
+              <mo>≈</mo><mi>exp</mi><mo>(</mo>
+              <mo>−</mo><mi>d</mi><mo>·</mo><msub><mi>ε</mi><mn>0</mn></msub><mo>−</mo>
+              <mfrac>
+                <mrow><mi>γ</mi><mo>·</mo><mi>d</mi><mo>(</mo><mi>d</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow>
+                <mrow><mn>2</mn><mo>·</mo><msub><mi>L</mi><mtext>eff</mtext></msub></mrow>
+              </mfrac><mo>)</mo>
+            </mrow>
+          </math>
+        </div>
       </div>
     </div>
     <div class="step">
@@ -541,7 +583,27 @@
         <p>Set the decay equal to your success threshold α and solve the quadratic. The positive root is the
            <b>Deterministic Horizon</b> — a single, usable engineering number. For GPT-4o (ε₀=0.02, γ=0.15,
            L_eff=150, α=0.5) it lands at <span class="mono">d*≈22.3</span>.</p>
-        <div class="eq">d* = ( −ε₀·L_eff + √( ε₀²·L_eff² + 2γ·L_eff·ln(1/α) ) ) / γ</div>
+        <div class="eq matheq">
+          <math display="block" aria-label="d-star equals minus epsilon-zero L-eff plus square root of epsilon-zero squared L-eff squared plus 2 gamma L-eff natural-log of 1 over alpha, all over gamma">
+            <mrow>
+              <msup><mi>d</mi><mo>∗</mo></msup><mo>=</mo>
+              <mfrac>
+                <mrow>
+                  <mo>−</mo><msub><mi>ε</mi><mn>0</mn></msub><mo>·</mo><msub><mi>L</mi><mtext>eff</mtext></msub><mo>+</mo>
+                  <msqrt>
+                    <mrow>
+                      <msubsup><mi>ε</mi><mn>0</mn><mn>2</mn></msubsup><mo>·</mo>
+                      <msubsup><mi>L</mi><mtext>eff</mtext><mn>2</mn></msubsup><mo>+</mo>
+                      <mn>2</mn><mi>γ</mi><mo>·</mo><msub><mi>L</mi><mtext>eff</mtext></msub><mo>·</mo>
+                      <mi>ln</mi><mo>(</mo><mn>1</mn><mo>/</mo><mi>α</mi><mo>)</mo>
+                    </mrow>
+                  </msqrt>
+                </mrow>
+                <mi>γ</mi>
+              </mfrac>
+            </mrow>
+          </math>
+        </div>
       </div>
     </div>
   </div>
@@ -776,7 +838,25 @@ function renderVerdict(){
     `should_delegate(estimated_depth=${d}, eps0=${S.eps0.toFixed(3)}, l_eff=${Math.round(S.leff)}) → ${delegate}   #reason=${reason}`;
   drawPlot();
 }
-function render(){ renderStats(); renderVerdict(); }
+// Tornado sensitivity: how far d* moves when each parameter is nudged ±20%.
+const SENS_RANGE={eps0:[0.005,0.05],gamma:[0.02,0.40],leff:[40,600],alpha:[0.1,0.9]};
+const SENS_LABEL={eps0:"ε₀ baseline error",gamma:"γ decay rate",leff:"L_eff length",alpha:"α threshold"};
+function renderSens(){
+  const rows=Object.keys(SENS_RANGE).map(k=>{
+    const loV=clamp(S[k]*0.8,SENS_RANGE[k][0],SENS_RANGE[k][1]);
+    const hiV=clamp(S[k]*1.2,SENS_RANGE[k][0],SENS_RANGE[k][1]);
+    const at=v=>{ const s=Object.assign({},S); s[k]=v; return horizon(s.eps0,s.gamma,s.leff,s.alpha); };
+    const a=at(loV), b=at(hiV), lo=Math.min(a,b), hi=Math.max(a,b);
+    return {label:SENS_LABEL[k], lo, hi, span:hi-lo};
+  }).filter(r=>isFinite(r.span)&&r.lo>0).sort((x,y)=>y.span-x.span);
+  const maxSpan=Math.max(...rows.map(r=>r.span), 1e-6);
+  el("sensRows").innerHTML=rows.map(r=>
+    `<div class="sens-row"><span class="sens-k">${r.label}</span>`+
+    `<span class="sens-bar"><span style="width:${(r.span/maxSpan*100).toFixed(0)}%"></span></span>`+
+    `<span class="sens-v">${r.lo.toFixed(1)}→${r.hi.toFixed(1)} <b>Δ${r.span.toFixed(1)}</b></span></div>`
+  ).join("");
+}
+function render(){ renderStats(); renderVerdict(); renderSens(); }
 
 // ---- Explorer actions ----
 el("themeBtn").addEventListener("click",()=>{

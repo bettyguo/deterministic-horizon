@@ -23,6 +23,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   walkthrough**. Sticky nav, dark/light with persistence, `aria-live` regions,
   `prefers-reduced-motion` support, and keyboard-accessible controls throughout.
   A headless Playwright pass confirms zero console errors across every section.
+- **Live sensitivity ("what moves the horizon?") panel** in the explorer — a
+  tornado view that ranks how far `d*` shifts when each parameter (ε₀, γ, L_eff,
+  α) is nudged ±20% from the current setting, updating in real time as you drag.
+- **Native MathML equations** for the three-step theorem walkthrough — crisp,
+  zero-dependency typeset math (no KaTeX/MathJax) with `aria-label` fallbacks.
+- **Lint**: `ruff check .` is now fully green across the repo, including the
+  quickstart notebook (sorted imports, no multi-statement lines).
 - **Shareability & SEO for the site**: a `summary_large_image` social card
   (`docs/og-image.png`), Open Graph / Twitter image + description tags,
   schema.org `ScholarlyArticle` JSON-LD, a canonical link, and first-visit
