@@ -4,16 +4,43 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Deterministic Horizon — Interactive Explorer (ICML 2026)</title>
-<meta name="description" content="Interactive companion to the Deterministic Horizon (ICML 2026): drag the decoherence parameters and watch chain-of-thought accuracy decay, solve for the horizon d* in closed form, compare frontier models, weigh cost vs. accuracy, and learn exactly when an agent should delegate to a tool." />
+<meta name="description" content="Interactive companion to the Deterministic Horizon (ICML 2026): drag the decoherence parameters and watch chain-of-thought accuracy decay, solve for the horizon d* in closed form, compare frontier models, weigh cost vs. accuracy, plan a whole agent decomposition, and learn exactly when an agent should delegate to a tool." />
 <meta name="author" content="Dongxin Guo, Jikun Wu, Siu Ming Yiu" />
+<meta name="keywords" content="deterministic horizon, chain-of-thought, tool delegation, LLM reasoning, attention decoherence, ICML 2026, agentic AI, when to delegate, should_delegate" />
 <meta name="color-scheme" content="dark light" />
+<link rel="canonical" href="https://bettyguo.github.io/deterministic-horizon/" />
 <!-- Open Graph / social -->
 <meta property="og:type" content="website" />
+<meta property="og:site_name" content="The Deterministic Horizon" />
 <meta property="og:title" content="The Deterministic Horizon — Interactive Explorer" />
 <meta property="og:description" content="When extended chain-of-thought stops helping and tool delegation becomes necessary. Drag the parameters, watch the wall, learn the boundary." />
 <meta property="og:url" content="https://bettyguo.github.io/deterministic-horizon/" />
+<meta property="og:image" content="https://bettyguo.github.io/deterministic-horizon/og-image.png" />
+<meta property="og:image:alt" content="Neural chain-of-thought accuracy decays super-exponentially and crosses 50% at the Deterministic Horizon d*, while tool delegation stays flat near the top." />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="The Deterministic Horizon — Interactive Explorer" />
+<meta name="twitter:description" content="Drag the decoherence parameters, watch chain-of-thought hit the wall, and learn exactly when an agent should delegate to a tool." />
+<meta name="twitter:image" content="https://bettyguo.github.io/deterministic-horizon/og-image.png" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ScholarlyArticle",
+  "headline": "The Deterministic Horizon: When Extended Reasoning Fails and Tool Delegation Becomes Necessary",
+  "author": [
+    {"@type": "Person", "name": "Dongxin Guo"},
+    {"@type": "Person", "name": "Jikun Wu"},
+    {"@type": "Person", "name": "Siu Ming Yiu"}
+  ],
+  "isPartOf": "Proceedings of the 43rd International Conference on Machine Learning (ICML)",
+  "datePublished": "2026",
+  "url": "https://bettyguo.github.io/deterministic-horizon/",
+  "image": "https://bettyguo.github.io/deterministic-horizon/og-image.png",
+  "license": "https://opensource.org/licenses/MIT",
+  "abstract": "Frontier models hit a wall on deterministic state-tracking at the same reasoning depth across six labs. We name this boundary the Deterministic Horizon d*, derive it in closed form from the information-theoretic capacity of attention, and show that past it tool delegation is a necessity rather than an optimization.",
+  "keywords": "chain-of-thought, tool delegation, attention decoherence, agentic AI, LLM reasoning"
+}
+</script>
 <style>
   :root{
     --bg:#0e1117; --bg-2:#0b0e14; --panel:#161b22; --panel-2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
@@ -1153,7 +1180,11 @@ document.addEventListener("keydown",e=>{
  * Init
  * ======================================================================== */
 (function init(){
-  try{ const t=localStorage.getItem("dh-theme"); if(t) document.body.dataset.theme=t; }catch(_){}
+  try{
+    const t=localStorage.getItem("dh-theme");
+    if(t){ document.body.dataset.theme=t; }
+    else if(matchMedia("(prefers-color-scheme: light)").matches){ document.body.dataset.theme="light"; }
+  }catch(_){}
   for(const k of Object.keys(sliders)) syncSlider(k);
   const fromHash = loadHash();
   if(!fromHash){ presetSel.value="gpt-4o"; applyPreset("gpt-4o", false); }

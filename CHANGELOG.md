@@ -23,6 +23,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   walkthrough**. Sticky nav, dark/light with persistence, `aria-live` regions,
   `prefers-reduced-motion` support, and keyboard-accessible controls throughout.
   A headless Playwright pass confirms zero console errors across every section.
+- **Shareability & SEO for the site**: a `summary_large_image` social card
+  (`docs/og-image.png`), Open Graph / Twitter image + description tags,
+  schema.org `ScholarlyArticle` JSON-LD, a canonical link, and first-visit
+  respect for the OS `prefers-color-scheme` (saved preference still wins).
 - **Practitioner API helpers** in `policy.py`: `should_delegate_batch(...)`
   (vectorised routing for a whole decomposition), `recommend_model(...)`
   (pick the least over-powered model that still clears the threshold at a given
