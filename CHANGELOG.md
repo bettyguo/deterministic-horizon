@@ -16,7 +16,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   The explorer chart is **keyboard-operable**: focus it and use `←`/`→`
   (`Shift` = ±5, `Home`/`End` to jump) to move the depth probe, with a visible
   focus ring and a live decision readout. The hover tooltip now also calls the
-  reason/delegate verdict at the probed depth.
+  reason/delegate verdict at the probed depth. The cost-vs-accuracy chart — the
+  last static one — gained a hover/touch probe that reads the neural and tool
+  cost-per-correct and the cost ratio at any depth.
 - **World-class interactive learning site** (`docs/index.html`) — the
   dependency-free GitHub Pages app grew from a single explorer into a guided,
   seven-section experience: the live horizon explorer (now with a hover tooltip,
