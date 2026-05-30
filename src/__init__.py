@@ -36,7 +36,10 @@ from deterministic_horizon.policy import (
     delegation_decision,
     expected_neural_accuracy,
     horizon_for,
+    horizon_table,
+    recommend_model,
     should_delegate,
+    should_delegate_batch,
 )
 from deterministic_horizon.tasks import (
     ArithmeticTask,
@@ -64,7 +67,7 @@ def __getattr__(name: str):
         from deterministic_horizon import models as _models
 
         return getattr(_models, name)
-    if name in {"generate_figures", "generate_tables", "decay_curve"}:
+    if name in {"generate_figures", "generate_tables", "decay_curve", "plot_model_horizons"}:
         from deterministic_horizon import analysis as _analysis
 
         return getattr(_analysis, name)
@@ -99,9 +102,12 @@ __all__ = [
     "fit_decoherence_model",
     # Practitioner decision helpers
     "should_delegate",
+    "should_delegate_batch",
     "delegation_decision",
     "expected_neural_accuracy",
     "horizon_for",
+    "horizon_table",
+    "recommend_model",
     "DelegationDecision",
     "MODEL_HORIZONS",
     "DEFAULT_TOOL_ACCURACY",
@@ -117,5 +123,6 @@ __all__ = [
     "generate_figures",
     "generate_tables",
     "decay_curve",
+    "plot_model_horizons",
     "evaluate",
 ]

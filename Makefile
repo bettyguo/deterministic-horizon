@@ -4,7 +4,7 @@
 PY ?= python
 
 .DEFAULT_GOAL := help
-.PHONY: help install dev test lint fmt demo paper-figures paper-tables sample clean
+.PHONY: help install dev test lint fmt demo paper-figures paper-tables compare-figure sample clean
 
 help:  ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -35,6 +35,9 @@ paper-figures:  ## Regenerate assets/figure_*.png from results/sample/.
 
 paper-tables:  ## Regenerate analysis/*.{md,json} from results/sample/.
 	$(PY) scripts/regenerate_sample_data.py --tables
+
+compare-figure:  ## Render the per-model horizon comparison to assets/.
+	$(PY) -m deterministic_horizon.cli compare-figure --output assets/figure_model_horizons.png
 
 sample:  ## Regenerate all deterministic sample artefacts.
 	$(PY) scripts/regenerate_sample_data.py
