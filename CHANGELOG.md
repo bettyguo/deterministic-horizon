@@ -18,6 +18,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reproducing guide, and FAQ.
 - Project meta files: `LICENSE`, `CITATION.cff`, `CONTRIBUTING.md`, this
   changelog, and a `Makefile` with `paper-figures` / `paper-tables` targets.
+- **Google Gemini and Together AI model adapters** (`gemini_models.py`,
+  `together_models.py`) built on a shared `OpenAICompatibleModel` base — both use
+  the providers' OpenAI-compatible endpoints, so the only extra dependency is the
+  `openai` client. Registered in `MODEL_REGISTRY`; keys added to `.env.example`.
+- Tests: model-registry resolution (`test_models.py`, incl. the exact-match
+  guard so `llama-3.1-8b` ≠ `together-llama-3.1-8b`) and an explorer↔policy
+  constants sync guard (`test_explorer_sync.py`). Suite is now 48 tests.
 
 ### Changed
 - Theorem references in `analysis.py` aligned with the camera-ready numbering
