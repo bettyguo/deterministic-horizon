@@ -262,6 +262,76 @@ def train(
 
 
 @app.command()
+def delegate(
+    depth: int = typer.Option(..., "--depth", "-d", help="Estimated subproblem depth (steps)"),
+    model: str = typer.Option("default", "--model", "-m", help="Model identifier"),
+    tool_accuracy: float = typer.Option(0.92, help="Empirical tool (C3) accuracy"),
+    threshold: float = typer.Option(0.5, help="Neural-accuracy threshold for d*"),
+    no_tool: bool = typer.Option(False, "--no-tool", help="Assume no tool is available"),
+) -> None:
+    """Decide whether an agent should delegate at a given depth (the paper's policy)."""
+    from deterministic_horizon.policy import delegation_decision
+
+    d = delegation_decision(
+        estimated_depth=depth,
+        model=model,
+        tool_available=not no_tool,
+        tool_accuracy=tool_accuracy,
+        threshold=threshold,
+    )
+    verb = "DELEGATE → call a tool" if d.delegate else "REASON → neural chain-of-thought"
+    color = "red" if d.delegate else "green"
+    console.print(f"\n[bold {color}]{verb}[/]")
+    console.print(d.explain())
+
+    table = Table(show_header=False, box=None, padding=(0, 2))
+    table.add_row("depth", str(d.estimated_depth))
+    table.add_row("model", d.model)
+    table.add_row("horizon d*", f"{d.horizon:.1f}")
+    table.add_row("neural accuracy", f"{d.expected_neural_accuracy:.1%}")
+    table.add_row("tool accuracy", f"{d.expected_tool_accuracy:.1%}")
+    table.add_row("reason", d.reason)
+    console.print(table)
+
+
+@app.command()
+def horizons() -> None:
+    """Show the Deterministic Horizon and decoherence parameters for every model."""
+    from deterministic_horizon.policy import horizon_table
+
+    table = Table(title="Per-model Deterministic Horizons (paper Table 3 / 5)")
+    table.add_column("Model", style="cyan")
+    table.add_column("d*", justify="right", style="yellow")
+    table.add_column("ε₀", justify="right")
+    table.add_column("L_eff", justify="right", style="green")
+    table.add_column("γ", justify="right", style="dim")
+    for row in horizon_table():
+        table.add_row(
+            str(row["model"]),
+            f"{row['d_star']:.0f}",
+            f"{row['eps0']:.3f}",
+            f"{row['l_eff']:.0f}",
+            f"{row['gamma']:.2f}",
+        )
+    console.print(table)
+
+
+@app.command(name="compare-figure")
+def compare_figure(
+    output: Path = typer.Option("analysis/figure_model_horizons.png", help="Output image path"),
+    dpi: int = typer.Option(150, help="Raster DPI"),
+) -> None:
+    """Render the per-model decay-curve comparison figure (static twin of the web chart)."""
+    from deterministic_horizon.analysis import plot_model_horizons
+
+    path = plot_model_horizons(output, dpi=dpi)
+    if path is None:
+        console.print("[yellow]matplotlib not available — install with: pip install -e '.[viz]'[/]")
+        raise typer.Exit(1)
+    console.print(f"[green]✓ Saved model-horizon comparison to {path}[/]")
+
+
+@app.command()
 def list_models() -> None:
     """List available models."""
     table = Table(title="Available Models")

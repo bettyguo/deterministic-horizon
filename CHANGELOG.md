@@ -7,10 +7,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- **Interactive horizon explorer** (`docs/horizon-explorer.html`) — a
-  dependency-free, single-file web app with live sliders for ε₀, γ, L_eff and α
-  that plots the Theorem 4.2 decay curve and solves for d\* in real time, plus
-  per-model presets and a delegation calculator. Deployable to GitHub Pages.
+- **World-class interactive learning site** (`docs/index.html`) — the
+  dependency-free GitHub Pages app grew from a single explorer into a guided,
+  six-section experience: the live horizon explorer (now with a hover tooltip,
+  shareable permalinks that encode every slider, one-click PNG export, and a
+  "copy Python" button), a **multi-model comparison** chart with toggleable
+  decay curves, a **cost-vs-accuracy** panel that shows why tools are 4.2–4.7×
+  cheaper per correct solution, an animated **two-theories** ledger, a
+  **"think or delegate?" quiz**, and an interactive **three-step theorem
+  walkthrough**. Sticky nav, dark/light with persistence,
+  `prefers-reduced-motion` support, and keyboard-accessible controls throughout.
+- **Practitioner API helpers** in `policy.py`: `should_delegate_batch(...)`
+  (vectorised routing for a whole decomposition), `recommend_model(...)`
+  (pick the least over-powered model that still clears the threshold at a given
+  depth), and `horizon_table()` (sorted per-model d\* / ε₀ / L_eff rows).
+- **New CLI commands**: `dh delegate` (one-shot routing decision with a full
+  explanation), `dh horizons` (per-model horizon table), and `dh compare-figure`
+  (render the per-model decay-curve comparison).
+- **`analysis.plot_model_horizons(...)`** — the static, publication-grade twin
+  of the web comparison chart; ships as `assets/figure_model_horizons.png` and
+  appears in the README.
+- Tests for every new helper (`tests/test_policy_extras.py`); the suite is now
+  **60 tests** (was 48).
+- **Interactive horizon explorer** — the original single-file explorer
+  (`docs/horizon-explorer.html` now redirects to `docs/index.html`): live
+  sliders for ε₀, γ, L_eff and α that plot the Theorem 4.2 decay curve and
+  solve for d\* in real time, plus per-model presets and a delegation
+  calculator. Deployable to GitHub Pages.
 - **Quickstart notebook** (`notebooks/01_quickstart.ipynb`) — the Colab badge
   target: estimate the horizon offline, fit the decoherence model, and route a
   toy agent in under a minute.

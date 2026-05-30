@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/lint-ruff-46aef7.svg)](https://github.com/astral-sh/ruff)
-[![Tests](https://img.shields.io/badge/tests-48%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-60%20passing-brightgreen.svg)](tests/)
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/bettyguo/deterministic-horizon/blob/main/notebooks/01_quickstart.ipynb)
 [![Live demo](https://img.shields.io/badge/live%20demo-interactive%20explorer-8a4fff.svg)](https://bettyguo.github.io/deterministic-horizon/)
 
@@ -38,6 +38,12 @@ We tested **12 frontier models** on **deterministic state-space search** — the
 <sub>PermutationProbe, neural CoT vs. tool-integrated reasoning (paper Table&nbsp;3).</sub>
 
 The wall sits at **d\* ∈ [19, 31] reasoning steps**. We give it a name (the **Deterministic Horizon**), derive it from the information-theoretic capacity of attention (Theorem&nbsp;4.2), and prove that **fine-tuning cannot push past it** (Theorem&nbsp;4.7).
+
+<div align="center">
+<img src="assets/figure_model_horizons.png" alt="Per-model neural CoT decay curves; each model's horizon d* falls between 19 and 31 steps, and every curve drops below the 92% tool baseline past its horizon." width="720"/>
+<br/>
+<sub><b>Same wall, different distances.</b> Lower baseline error and longer effective decoherence length push the horizon out — but every model crosses below the tool baseline. Regenerate with <code>dh compare-figure</code>; explore it live in the <a href="https://bettyguo.github.io/deterministic-horizon/#compare">interactive comparison</a>.</sub>
+</div>
 
 > **Why care?** Every agentic system shipping today — code agents, browser agents, planners — must decide *when to think* and *when to call a tool*. Past d\*, "think harder" is a coin flip. Hand off.
 
@@ -77,6 +83,11 @@ cd deterministic-horizon
 pip install -e .
 python examples/demo.py            # estimates the horizon live, offline
 python examples/agent_routing.py   # end-to-end routing pattern
+
+# Or query the policy straight from the CLI — no API keys, no data:
+dh delegate --depth 30 --model claude-4.5-opus   # → DELEGATE (47% CoT vs 92% tool)
+dh horizons                                       # per-model d* / ε₀ / L_eff table
+dh compare-figure                                 # render the per-model decay-curve figure
 ```
 
 You'll watch the horizon estimated from a synthetic decoherence simulator (per-step error exactly `ε₀ + γ·d/L_eff`), a decoherence-model fit of **R² ≈ 0.95**, and a publication-grade figure written to `analysis/figure_decay.png` (the hero image above).
@@ -153,7 +164,8 @@ A fourth result (Theorem 4.7) bounds fine-tuning recovery by $O(d^*/d)$ — the 
 from deterministic_horizon import (
     PermutationTask, generate_instances, evaluate,
     estimate_horizon, fit_decoherence_model,
-    should_delegate, delegation_decision,
+    should_delegate, should_delegate_batch, delegation_decision,
+    horizon_table, recommend_model,
 )
 
 # 1. Generate BFS-optimal-depth instances (depth == true BFS optimum)
@@ -169,6 +181,11 @@ print(f"d* = {horizon['d_star']:.1f}  (R² = {horizon['r_squared']:.3f})")
 
 # 4. Route in your own agent
 should_delegate(estimated_depth=horizon['d_star'] + 5, model="gpt-4o")   # → True
+
+# 5. Plan a whole decomposition at once, or pick the right model for a depth
+should_delegate_batch([5, 8, 35], model="gpt-4o")   # → [False, False, True]
+recommend_model(estimated_depth=18)                  # → least over-powered model that still clears 50%
+horizon_table()                                       # → per-model d* / ε₀ / L_eff rows (sorted) — the source for `dh horizons`
 ```
 
 ### The five experimental conditions
@@ -192,9 +209,9 @@ deterministic-horizon/
 │   ├── tasks/           # PermutationProbe, FSA-Sim, ArithChain (+ BFS oracle)
 │   ├── models/          # Uniform interface: OpenAI / Anthropic / DeepSeek / Gemini / Together / local
 │   ├── metrics/         # SSJ, SFE, super-exponential horizon fit, bootstrap CIs
-│   ├── analysis.py      # Figure + table generation
+│   ├── analysis.py      # Figures + tables (+ plot_model_horizons comparison)
 │   ├── runners.py       # High-level evaluate(...) Python API
-│   └── cli.py           # dh generate | evaluate | analyze
+│   └── cli.py           # dh generate | evaluate | analyze | delegate | horizons | compare-figure
 ├── examples/            # demo.py (offline horizon) · agent_routing.py
 ├── notebooks/           # 01_quickstart.ipynb (Colab-friendly)
 ├── docs/                # When-to-delegate · Theorem cheat-sheet · Reproducing · FAQ
@@ -267,7 +284,7 @@ Bug reports, new tasks, and extensions are welcome. See [`CONTRIBUTING.md`](CONT
 - [ ] SWE-Bench-State / WebArena-Nav / SQL-Multi adapters
 - [x] Gemini and Together adapters — OpenAI-compatible, in [`src/models/`](src/models/)
 - [ ] Mamba / RWKV / MoE decoherence study
-- [x] Interactive horizon visualiser — [live explorer](https://bettyguo.github.io/deterministic-horizon/) ([source](docs/index.html))
+- [x] Interactive horizon visualiser — [live explorer](https://bettyguo.github.io/deterministic-horizon/) ([source](docs/index.html)) with model comparison, cost analysis, and a delegation quiz
 
 ---
 
