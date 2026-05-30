@@ -82,6 +82,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (Thm 1 → Thm 4.2).
 
 ### Fixed
+- **Explorer "Copy Python" produced non-runnable code in custom mode** — it
+  emitted `should_delegate(estimated_depth=…, eps0=…, l_eff=…)`, but
+  `should_delegate` takes a `model`, not raw decoherence params, so the pasted
+  snippet raised `TypeError`. Custom points now emit runnable code against the
+  public `expected_neural_accuracy(…, eps0=…, l_eff=…)` API.
+- **Explorer perf**: theme-colour reads (`getComputedStyle`) are now memoised
+  and invalidated on theme toggle, removing 5–6 forced reflows from every
+  canvas redraw (i.e. from every slider drag and chart hover).
+- Minor explorer a11y: the comparison hover panel is an `aria-live` status
+  region, and quiz hotkeys call `preventDefault()` so they never scroll the page.
 - All `ruff` and `black` lint findings across `src/` and `tests/` (the CI lint
   job now passes cleanly).
 - Broken relative links in the README (docs, notebook, license, citation).
