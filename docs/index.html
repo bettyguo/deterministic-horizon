@@ -399,7 +399,7 @@
   <div class="card viz">
     <div class="model-toggles" id="cmpToggles" role="group" aria-label="Toggle model curves"></div>
     <div class="canvas-wrap">
-      <canvas id="cmpPlot" width="1100" height="440" aria-label="Decay curves for every model preset"></canvas>
+      <canvas id="cmpPlot" width="1100" height="440" tabindex="0" role="img" aria-label="Decay curves for every model preset. Focus and use the left and right arrow keys to scrub depth; a live ranking of every model's accuracy at that depth is announced."></canvas>
       <div id="cmpTip" role="status" aria-live="polite" style="position:absolute;pointer-events:none;opacity:0"></div>
     </div>
     <p class="hint" style="margin-top:10px">Curves use each model's paper <span class="mono">d*</span> with γ=0.15 and the
@@ -1061,6 +1061,38 @@ function cmpHover(ev){
 function cmpLeave(){ cmpHoverD=null; cmpTip.style.opacity=0; drawCompare(); }
 cmpCv.addEventListener("pointermove", cmpHover);
 cmpCv.addEventListener("pointerleave", cmpLeave);
+// keyboard scrubber — arrows move the depth probe across every curve and
+// re-announce the ranking (cmpTip is an aria-live region) for no-mouse access.
+function cmpShowAtDepth(d){
+  if(!cmpGeom) return;
+  const {m,pw,Dmax,x,W,H}=cmpGeom;
+  cmpHoverD=clamp(d,0,Dmax); drawCompare();
+  const rows=cmpModels.filter(n=>cmpOn[n]).map(name=>{
+    const [eps0,dstar]=MODELS[name]; const leff=lEffFor(eps0,dstar,0.5);
+    return {name, p:pCorrect(cmpHoverD,eps0,GAMMA_DEFAULT,leff), dstar};
+  }).sort((a,b)=>b.p-a.p);
+  if(!rows.length){ cmpTip.style.opacity=0; return; }
+  const near=rows[0];
+  cmpTip.innerHTML=`<div class="hd">depth d = ${cmpHoverD.toFixed(0)} · tool 92%</div>`+
+    rows.map(rr=>`<div class="tr${rr.name===near.name?" me":""}">`+
+      `<span class="nm"><span class="sw" style="background:${cmpColor[rr.name]}"></span>${rr.name}</span>`+
+      `<b style="color:${rr.p>=TOOL_DEFAULT-0.10?"var(--tool)":(rr.p<0.5?"var(--neural)":"var(--ink)")}">${(rr.p*100).toFixed(0)}%</b></div>`).join("");
+  cmpTip.style.opacity=1;
+  cmpTip.style.left=clamp(x(cmpHoverD)+14,0,W-200)+"px";
+  cmpTip.style.top=clamp(m.t+8,4,H-rows.length*22-40)+"px";
+}
+cmpCv.addEventListener("keydown", ev=>{
+  if(ev.key!=="ArrowLeft"&&ev.key!=="ArrowRight"&&ev.key!=="Home"&&ev.key!=="End") return;
+  ev.preventDefault();
+  const Dmax=cmpGeom?cmpGeom.Dmax:60;
+  let d=cmpHoverD==null?Math.round(Dmax/2):cmpHoverD;
+  const step=ev.shiftKey?5:1;
+  if(ev.key==="ArrowRight") d+=step; else if(ev.key==="ArrowLeft") d-=step;
+  else if(ev.key==="Home") d=0; else if(ev.key==="End") d=Dmax;
+  cmpShowAtDepth(d);
+});
+cmpCv.addEventListener("focus", ()=>{ if(cmpHoverD==null) cmpShowAtDepth(Math.round((cmpGeom?cmpGeom.Dmax:60)/2)); });
+cmpCv.addEventListener("blur", cmpLeave);
 
 /* ===========================================================================
  * Section 3 — Cost vs accuracy

@@ -18,7 +18,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   focus ring and a live decision readout. The hover tooltip now also calls the
   reason/delegate verdict at the probed depth. The cost-vs-accuracy chart — the
   last static one — gained a hover/touch probe that reads the neural and tool
-  cost-per-correct and the cost ratio at any depth.
+  cost-per-correct and the cost ratio at any depth. The multi-model comparison
+  chart is now keyboard-operable too: focus it and use `←`/`→`
+  (`Shift` = ±5, `Home`/`End`) to scrub depth while a live `aria-live` ranking
+  of every model's accuracy at that depth is announced — so all three charts are
+  fully usable with mouse, touch, *and* keyboard alone.
 - **World-class interactive learning site** (`docs/index.html`) — the
   dependency-free GitHub Pages app grew from a single explorer into a guided,
   seven-section experience: the live horizon explorer (now with a hover tooltip,
