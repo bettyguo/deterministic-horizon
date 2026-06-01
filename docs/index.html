@@ -793,11 +793,13 @@ function drawPlot(){
   for(let i=0;i<=pw;i++){ const d=i/pw*Dmax, p=pCorrect(d,S.eps0,S.gamma,S.leff);
     i?ctx.lineTo(x(d),y(p)):ctx.moveTo(x(d),y(p)); }
   ctx.lineTo(x(Dmax),y(0)); ctx.lineTo(x(0),y(0)); ctx.closePath();
-  ctx.fillStyle=neural; ctx.globalAlpha=.10; ctx.fill(); ctx.globalAlpha=1;
+  const ng=ctx.createLinearGradient(0,m.t,0,H-m.b);
+  ng.addColorStop(0,neural); ng.addColorStop(1,"transparent");
+  ctx.globalAlpha=.20; ctx.fillStyle=ng; ctx.fill(); ctx.globalAlpha=1;
   ctx.beginPath();
   for(let i=0;i<=pw;i++){ const d=i/pw*Dmax, p=pCorrect(d,S.eps0,S.gamma,S.leff);
     i?ctx.lineTo(x(d),y(p)):ctx.moveTo(x(d),y(p)); }
-  ctx.strokeStyle=neural; ctx.lineWidth=2.6; ctx.stroke();
+  ctx.strokeStyle=neural; ctx.lineWidth=2.6; ctx.lineJoin="round"; ctx.lineCap="round"; ctx.stroke();
 
   // horizon marker
   if(isFinite(dstar)&&dstar>0&&dstar<=Dmax){
@@ -810,9 +812,14 @@ function drawPlot(){
   // user-depth marker
   const ud=+el("depth").value;
   if(ud>=0&&ud<=Dmax){ const px=x(ud),py=y(pCorrect(ud,S.eps0,S.gamma,S.leff));
-    ctx.fillStyle=ink; ctx.beginPath();ctx.arc(px,py,4,0,7);ctx.fill();
-    ctx.strokeStyle=ink; ctx.globalAlpha=.3;ctx.setLineDash([2,3]);
+    ctx.strokeStyle=ink; ctx.globalAlpha=.3; ctx.setLineDash([2,3]); ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,H-m.b);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+    ctx.fillStyle=cssVar("--panel"); ctx.beginPath();ctx.arc(px,py,5.5,0,7);ctx.fill();   // halo
+    ctx.fillStyle=ink; ctx.beginPath();ctx.arc(px,py,3.5,0,7);ctx.fill();                 // probe dot
+    ctx.font="700 11px system-ui"; ctx.textBaseline="bottom"; ctx.fillStyle=ink;
+    const lbl="d="+ud, tw=ctx.measureText(lbl).width;
+    ctx.textAlign = (px+tw+12>W-m.r) ? "right" : "left";
+    ctx.fillText(lbl, px+(ctx.textAlign==="right"?-9:9), py-8);
   }
 }
 

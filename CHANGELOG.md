@@ -22,7 +22,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   chart is now keyboard-operable too: focus it and use `←`/`→`
   (`Shift` = ±5, `Home`/`End`) to scrub depth while a live `aria-live` ranking
   of every model's accuracy at that depth is announced — so all three charts are
-  fully usable with mouse, touch, *and* keyboard alone.
+  fully usable with mouse, touch, *and* keyboard alone. Visual polish on the main
+  decay chart: a vertical gradient fill under the curve, rounded line joins, and a
+  haloed depth-probe marker labelled with its current `d=` value.
 - **World-class interactive learning site** (`docs/index.html`) — the
   dependency-free GitHub Pages app grew from a single explorer into a guided,
   seven-section experience: the live horizon explorer (now with a hover tooltip,
