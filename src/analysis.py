@@ -49,6 +49,72 @@ def decay_curve(
     return np.exp(-d * eps0 - gamma * d * (d + 1) / (2.0 * l_eff))
 
 
+def plot_model_horizons(
+    output_path: str | Path = "analysis/figure_model_horizons.png",
+    *,
+    dpi: int = 150,
+    alpha: float = 0.5,
+    d_max: float = 60.0,
+) -> Path | None:
+    """
+    Overlay the Theorem 4.2 decay curve for every model in
+    ``policy.MODEL_HORIZONS`` and mark each model's horizon d*.
+
+    This is the static, publication-grade twin of the web explorer's
+    "Why some models reach further" comparison chart. Returns the saved path,
+    or ``None`` if matplotlib is unavailable.
+    """
+    from deterministic_horizon.policy import MODEL_HORIZONS, expected_neural_accuracy
+
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        log.warning("matplotlib not installed; skipping model-horizon figure.")
+        return None
+
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Skip the synthetic cross-model fallback; plot deepest-horizon last so its
+    # label sits on top in the legend.
+    models = sorted(
+        (m for m in MODEL_HORIZONS if m != "default"),
+        key=lambda m: MODEL_HORIZONS[m]["d_star"],
+    )
+    cmap = plt.get_cmap("viridis")
+    d_grid = np.linspace(0, d_max, 240)
+
+    fig, ax = plt.subplots(figsize=(8.5, 4.8))
+    for i, name in enumerate(models):
+        color = cmap(i / max(1, len(models) - 1))
+        curve = np.array([expected_neural_accuracy(d, name) for d in d_grid])
+        d_star = MODEL_HORIZONS[name]["d_star"]
+        ax.plot(d_grid, curve, "-", color=color, linewidth=2.0, label=f"{name}  (d*={d_star:.0f})")
+        ax.plot([d_star], [alpha], "o", color=color, markersize=6)
+
+    ax.axhline(
+        0.92, color="#2a9d2a", linestyle="--", linewidth=1.6, label="Tool-integrated (C3) ≈ 92%"
+    )
+    ax.axhline(alpha, color="#aaa", linewidth=0.8)
+    ax.set_xlabel("Reasoning depth  $d$")
+    ax.set_ylabel("Expected neural CoT accuracy")
+    ax.set_title("Per-model decoherence: horizons span $d^* \\in [19, 31]$")
+    ax.set_xlim(0, d_max)
+    ax.set_ylim(0, 1.02)
+    ax.grid(True, alpha=0.25)
+    ax.legend(loc="upper right", fontsize=8, framealpha=0.95, ncol=2)
+    ax.margins(x=0)
+
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+    log.info("saved %s", output_path)
+    return output_path
+
+
 # ---------------------------------------------------------------------------
 # Figure generation
 # ---------------------------------------------------------------------------
@@ -338,4 +404,5 @@ __all__ = [
     "decay_curve",
     "generate_figures",
     "generate_tables",
+    "plot_model_horizons",
 ]
