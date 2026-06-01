@@ -20,6 +20,8 @@
 
 <sub><b>The wall has a name.</b> Neural CoT accuracy follows the super-exponential decay of Theorem&nbsp;4.2 and crosses 50% at the <b>Deterministic Horizon</b> <i>d</i>*. Tool delegation (C3) ignores the wall. <i>This is the offline <b>synthetic</b> reproduction (regenerated live from <a href="results/sample/synthetic_results.json"><code>results/sample/</code></a> — no API keys); it mirrors the paper's Fig.&nbsp;1 on real GPT-4o, whose measured numbers (d*&nbsp;=&nbsp;22, tool&nbsp;≈&nbsp;90%) appear in the table below.</i></sub>
 
+Interactive horizon visualiser — [live explorer](https://bettyguo.github.io/deterministic-horizon/) ([source](docs/index.html)) with model comparison, cost analysis, an agent decomposition planner, and a delegation quiz
+
 </div>
 
 ---
