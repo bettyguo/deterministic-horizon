@@ -44,6 +44,7 @@ True
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
@@ -333,6 +334,89 @@ def delegation_decision(
     )
 
 
+def should_delegate_batch(
+    depths: Sequence[int | float],
+    model: str = "default",
+    **kwargs: object,
+) -> list[bool]:
+    """
+    Vectorised :func:`should_delegate` for a planner that has a *list* of
+    candidate subproblem depths (e.g. one per sub-goal in a decomposition).
+
+    Returns one boolean per depth, in order. Extra keyword arguments are
+    forwarded verbatim to :func:`should_delegate` (``threshold``,
+    ``tool_accuracy``, ``margin``, ``tool_available``).
+
+    >>> should_delegate_batch([5, 8, 35], model="gpt-4o")
+    [False, False, True]
+    """
+    return [should_delegate(d, model=model, **kwargs) for d in depths]  # type: ignore[arg-type]
+
+
+def horizon_table() -> list[dict[str, float | str]]:
+    """
+    Tabular summary of every known model's decoherence parameters, sorted by
+    horizon (deepest-reasoning model last). Handy for logging, the ``dh
+    horizons`` CLI command, or building a comparison plot.
+
+    Each row has ``model``, ``eps0``, ``l_eff``, ``d_star`` and ``gamma``.
+    """
+    rows = [
+        {
+            "model": name,
+            "eps0": params["eps0"],
+            "l_eff": params["l_eff"],
+            "d_star": params["d_star"],
+            "gamma": params["gamma"],
+        }
+        for name, params in MODEL_HORIZONS.items()
+    ]
+    return sorted(rows, key=lambda r: r["d_star"])  # type: ignore[arg-type,return-value]
+
+
+def recommend_model(
+    estimated_depth: int | float,
+    *,
+    candidates: Sequence[str] | None = None,
+    threshold: float = ALPHA_DEFAULT,
+) -> tuple[str | None, float]:
+    """
+    Suggest the *least over-powered* model whose expected neural accuracy at
+    ``estimated_depth`` still clears ``threshold`` — i.e. a model that can
+    reason through the subproblem without delegating.
+
+    Among ``candidates`` (default: all known models except the synthetic
+    ``"default"`` fallback), returns the one with the *smallest* horizon that
+    still clears the threshold. If none clears it, returns ``(None,
+    best_accuracy)`` so the caller knows to delegate instead.
+
+    Returns ``(model_name_or_None, expected_neural_accuracy_of_that_model)``.
+
+    >>> recommend_model(8)[0] is not None      # some model handles depth 8
+    True
+    >>> recommend_model(500)[0] is None        # nobody reasons 500 steps deep
+    True
+    """
+    names = (
+        list(candidates)
+        if candidates is not None
+        else [m for m in MODEL_HORIZONS if m != "default"]
+    )
+    viable: list[tuple[float, str, float]] = []
+    best_acc = 0.0
+    for name in names:
+        acc = expected_neural_accuracy(estimated_depth, name)
+        if acc > best_acc:
+            best_acc = acc
+        if acc >= threshold:
+            viable.append((horizon_for(name), name, acc))
+    if not viable:
+        return None, best_acc
+    viable.sort()  # smallest horizon first — least over-powered model that works
+    _, name, acc = viable[0]
+    return name, acc
+
+
 __all__ = [
     "GAMMA",
     "MODEL_HORIZONS",
@@ -341,5 +425,8 @@ __all__ = [
     "expected_neural_accuracy",
     "horizon_for",
     "should_delegate",
+    "should_delegate_batch",
     "delegation_decision",
+    "horizon_table",
+    "recommend_model",
 ]

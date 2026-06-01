@@ -3,176 +3,644 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>The Deterministic Horizon — Interactive Explorer</title>
-<meta name="description" content="Interactive explorer for the Deterministic Horizon (ICML 2026): drag ε₀, γ, L_eff and α to watch chain-of-thought accuracy decay and solve for d* in real time." />
+<title>The Deterministic Horizon — Interactive Explorer (ICML 2026)</title>
+<meta name="description" content="Interactive companion to the Deterministic Horizon (ICML 2026): drag the decoherence parameters and watch chain-of-thought accuracy decay, solve for the horizon d* in closed form, compare frontier models, weigh cost vs. accuracy, plan a whole agent decomposition, and learn exactly when an agent should delegate to a tool." />
+<meta name="author" content="Dongxin Guo, Jikun Wu, Siu Ming Yiu" />
+<meta name="keywords" content="deterministic horizon, chain-of-thought, tool delegation, LLM reasoning, attention decoherence, ICML 2026, agentic AI, when to delegate, should_delegate" />
+<meta name="color-scheme" content="dark light" />
+<link rel="canonical" href="https://bettyguo.github.io/deterministic-horizon/" />
+<!-- Open Graph / social -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="The Deterministic Horizon" />
+<meta property="og:title" content="The Deterministic Horizon — Interactive Explorer" />
+<meta property="og:description" content="When extended chain-of-thought stops helping and tool delegation becomes necessary. Drag the parameters, watch the wall, learn the boundary." />
+<meta property="og:url" content="https://bettyguo.github.io/deterministic-horizon/" />
+<meta property="og:image" content="https://bettyguo.github.io/deterministic-horizon/og-image.png" />
+<meta property="og:image:alt" content="Neural chain-of-thought accuracy decays super-exponentially and crosses 50% at the Deterministic Horizon d*, while tool delegation stays flat near the top." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="The Deterministic Horizon — Interactive Explorer" />
+<meta name="twitter:description" content="Drag the decoherence parameters, watch chain-of-thought hit the wall, and learn exactly when an agent should delegate to a tool." />
+<meta name="twitter:image" content="https://bettyguo.github.io/deterministic-horizon/og-image.png" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ScholarlyArticle",
+  "headline": "The Deterministic Horizon: When Extended Reasoning Fails and Tool Delegation Becomes Necessary",
+  "author": [
+    {"@type": "Person", "name": "Dongxin Guo"},
+    {"@type": "Person", "name": "Jikun Wu"},
+    {"@type": "Person", "name": "Siu Ming Yiu"}
+  ],
+  "isPartOf": "Proceedings of the 43rd International Conference on Machine Learning (ICML)",
+  "datePublished": "2026",
+  "url": "https://bettyguo.github.io/deterministic-horizon/",
+  "image": "https://bettyguo.github.io/deterministic-horizon/og-image.png",
+  "license": "https://opensource.org/licenses/MIT",
+  "abstract": "Frontier models hit a wall on deterministic state-tracking at the same reasoning depth across six labs. We name this boundary the Deterministic Horizon d*, derive it in closed form from the information-theoretic capacity of attention, and show that past it tool delegation is a necessity rather than an optimization.",
+  "keywords": "chain-of-thought, tool delegation, attention decoherence, agentic AI, LLM reasoning"
+}
+</script>
 <style>
   :root{
-    --bg:#0e1117; --panel:#161b22; --panel-2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
-    --line:#2b3441; --accent:#4ea1ff; --neural:#ff5d52; --tool:#34c759; --horizon:#ffb454;
-    --grid:#222b36; --shadow:0 8px 30px rgba(0,0,0,.35);
+    --bg:#0e1117; --bg-2:#0b0e14; --panel:#161b22; --panel-2:#1c2330; --ink:#e6edf3; --muted:#9aa7b4;
+    --line:#2b3441; --accent:#4ea1ff; --accent-2:#8a4fff; --neural:#ff5d52; --tool:#34c759; --horizon:#ffb454;
+    --grid:#222b36; --shadow:0 8px 30px rgba(0,0,0,.35); --ok:#34c759; --bad:#ff5d52;
+    --radius:14px;
   }
   [data-theme="light"]{
-    --bg:#f6f8fa; --panel:#ffffff; --panel-2:#f0f3f7; --ink:#1a2027; --muted:#5b6773;
-    --line:#e1e7ee; --accent:#1f5fb4; --neural:#d6332e; --tool:#2a9d2a; --horizon:#d98b00;
-    --grid:#e8edf3; --shadow:0 8px 30px rgba(20,40,80,.10);
+    --bg:#f6f8fa; --bg-2:#eef2f6; --panel:#ffffff; --panel-2:#f0f3f7; --ink:#1a2027; --muted:#5b6773;
+    --line:#e1e7ee; --accent:#1f5fb4; --accent-2:#6c3fd4; --neural:#d6332e; --tool:#2a9d2a; --horizon:#d98b00;
+    --grid:#e8edf3; --shadow:0 8px 30px rgba(20,40,80,.10); --ok:#2a9d2a; --bad:#d6332e;
   }
   *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
   html,body{margin:0;padding:0}
   body{
-    background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 500px at 80% -10%, color-mix(in srgb,var(--accent-2) 12%,transparent), transparent 60%),
+      radial-gradient(900px 420px at 0% 0%, color-mix(in srgb,var(--accent) 10%,transparent), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     -webkit-font-smoothing:antialiased; transition:background .25s,color .25s;
   }
   a{color:var(--accent);text-decoration:none}
   a:hover{text-decoration:underline}
-  header{max-width:1180px;margin:0 auto;padding:30px 22px 6px}
+  h2.section{font-size:24px;letter-spacing:-.01em;margin:0 0 4px}
+  .lead{color:var(--muted);max-width:760px;margin:0 0 20px}
+  .mono{font-family:"SFMono-Regular",Consolas,Menlo,monospace}
+
+  /* ---------- Nav ---------- */
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(140%) blur(10px);
+      background:color-mix(in srgb,var(--bg) 78%,transparent);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:1180px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:18px}
+  .brand{font-weight:800;letter-spacing:-.01em;white-space:nowrap}
+  .brand .compass{filter:saturate(1.2)}
+  .nav-links{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+  .nav-links a{color:var(--muted);font-size:13.5px;font-weight:600;padding:6px 10px;border-radius:8px}
+  .nav-links a:hover{color:var(--ink);background:var(--panel-2);text-decoration:none}
+  .nav-cta{display:flex;gap:8px}
+  @media (max-width:760px){.nav-links{display:none}}
+
+  /* ---------- Layout ---------- */
+  header.hero{max-width:1180px;margin:0 auto;padding:42px 22px 8px}
   .eyebrow{letter-spacing:.14em;text-transform:uppercase;font-size:11.5px;color:var(--muted);font-weight:700}
-  h1{margin:.18em 0 .1em;font-size:30px;line-height:1.15;letter-spacing:-.01em}
-  h1 .compass{filter:saturate(1.2)}
-  .sub{color:var(--muted);max-width:720px;margin:.2em 0 0}
-  .wrap{max-width:1180px;margin:14px auto 60px;padding:0 22px;
-        display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+  h1{margin:.16em 0 .12em;font-size:clamp(28px,5vw,44px);line-height:1.08;letter-spacing:-.02em}
+  .grad{background:linear-gradient(92deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--muted);max-width:760px;margin:.35em 0 0;font-size:17px}
+  .hero-badges{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 6px}
+  section.band{max-width:1180px;margin:34px auto;padding:0 22px;scroll-margin-top:64px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+  /* ---------- Explorer grid ---------- */
+  .wrap{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
   @media (max-width:900px){.wrap{grid-template-columns:1fr}}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
-  .controls{padding:18px 18px 6px;position:sticky;top:14px}
-  .controls h2,.viz h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px}
-  .row{margin:0 0 16px}
+  .controls{padding:18px 18px 8px;position:sticky;top:64px}
+  .controls h3,.viz h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px}
+  .row{margin:0 0 15px}
   .row label{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;margin-bottom:6px}
   .row label .val{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700}
   .row .hint{font-size:12px;color:var(--muted);font-weight:400}
   input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;
     background:linear-gradient(90deg,var(--accent) var(--pct,40%),var(--line) var(--pct,40%));outline:none}
+  input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
     background:#fff;border:3px solid var(--accent);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3)}
   input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--accent);cursor:pointer}
   select{width:100%;padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:inherit}
   .viz{padding:16px 18px 20px}
   .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 14px}
-  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:12px 13px}
-  .stat .k{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-  .stat .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:3px}
-  .stat .v small{font-size:13px;font-weight:600;color:var(--muted)}
-  canvas{width:100%;height:auto;display:block}
+  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:12px 13px;position:relative;overflow:hidden}
+  .stat::after{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--accent);opacity:.7}
+  .stat.neural::after{background:var(--neural)} .stat.tool::after{background:var(--tool)} .stat.hz::after{background:var(--horizon)}
+  .stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .stat .v{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:3px}
+  .stat .v small{font-size:12.5px;font-weight:600;color:var(--muted)}
+  .canvas-wrap{position:relative}
+  canvas{width:100%;height:auto;display:block;border-radius:8px}
+  canvas:focus{outline:none}
+  canvas:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  #tooltip,#cmpTip,#costTip{position:absolute;pointer-events:none;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:var(--shadow);opacity:0;transition:opacity .12s;z-index:5;min-width:120px}
+  #tooltip b,#cmpTip b{font-variant-numeric:tabular-nums}
+  #cmpTip{min-width:178px;line-height:1.5}
+  #cmpTip .tr{display:flex;justify-content:space-between;gap:14px}
+  #cmpTip .tr .nm{display:flex;align-items:center;gap:6px}
+  #cmpTip .tr .sw{width:9px;height:9px;border-radius:50%;display:inline-block}
+  #cmpTip .tr.me{font-weight:700}
+  #cmpTip .hd{color:var(--muted);font-size:11px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
   .legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 2px 0;font-size:13px;color:var(--muted)}
   .legend i{display:inline-block;width:22px;height:0;border-top-width:3px;border-top-style:solid;vertical-align:middle;margin-right:6px;border-radius:2px}
   .calc{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+  .calc h3{margin-bottom:10px}
   .calc .field{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .calc input[type=number]{width:90px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:inherit}
+  .calc input[type=number]{width:84px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:inherit}
   .verdict{margin-top:12px;padding:13px 15px;border-radius:11px;font-weight:600;border:1px solid transparent;line-height:1.45}
   .verdict.delegate{background:color-mix(in srgb,var(--neural) 16%,transparent);border-color:var(--neural)}
   .verdict.reason{background:color-mix(in srgb,var(--tool) 14%,transparent);border-color:var(--tool)}
   .verdict .tag{display:inline-block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:999px;color:#fff;margin-right:8px;vertical-align:middle}
   .verdict.delegate .tag{background:var(--neural)} .verdict.reason .tag{background:var(--tool)}
-  .toolbar{position:absolute;top:18px;right:22px;display:flex;gap:8px}
-  .btn{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:7px 12px;font:inherit;font-size:13px}
-  .btn:hover{border-color:var(--accent)}
   .eq{font-family:"SFMono-Regular",Consolas,Menlo,monospace;background:var(--panel-2);border:1px solid var(--line);
-      border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--muted);overflow-x:auto;margin:4px 0 0}
-  footer{max-width:1180px;margin:0 auto;padding:0 22px 50px;color:var(--muted);font-size:13px}
+      border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--muted);overflow-x:auto;margin:10px 0 0;white-space:pre}
+  /* native MathML — zero-dependency typeset equations */
+  .eq.matheq{font-family:inherit;font-size:15px;color:var(--ink);white-space:normal;overflow-x:auto;padding:12px 14px}
+  .eq.matheq math{font-size:1.08em}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+  /* ---------- Sensitivity (what moves d*) ---------- */
+  .sens{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .sens h3{margin-bottom:4px}
+  .sens .cap{color:var(--muted);font-size:12px;margin:0 0 10px}
+  .sens-row{display:grid;grid-template-columns:128px 1fr auto;gap:10px;align-items:center;margin:8px 0;font-size:13px}
+  .sens-k{color:var(--muted)}
+  .sens-bar{height:9px;border-radius:6px;background:var(--panel-2);overflow:hidden}
+  .sens-bar>span{display:block;height:100%;border-radius:6px;background:linear-gradient(92deg,var(--accent),var(--accent-2));transition:width .3s cubic-bezier(.22,1,.36,1)}
+  .sens-v{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+  .sens-v b{color:var(--ink)}
+
+  /* ---------- Buttons / pills ---------- */
+  .btn{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:7px 12px;font:inherit;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:border-color .15s,transform .05s}
+  .btn:hover{border-color:var(--accent);text-decoration:none}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:linear-gradient(92deg,var(--accent),var(--accent-2));border-color:transparent;color:#fff}
+  .btn.copied{border-color:var(--ok);color:var(--ok)}
+  .pill{display:inline-block;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:12px;color:var(--muted)}
+
+  /* ---------- Comparison + cost ---------- */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  @media (max-width:900px){.two-col{grid-template-columns:1fr}}
+  .model-toggles{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+  .chip{cursor:pointer;user-select:none;border:1px solid var(--line);background:var(--panel-2);border-radius:999px;
+    padding:5px 11px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:opacity .15s}
+  .chip .dot{width:10px;height:10px;border-radius:50%}
+  .chip[aria-pressed="false"]{opacity:.38}
+  .chip[aria-pressed="false"] .dot{filter:grayscale(1)}
+
+  /* ---------- Decomposition planner ---------- */
+  .plan-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+  .plan-add input[type=number]{width:86px;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font:inherit}
+  .plan-add .quick{display:flex;gap:6px;flex-wrap:wrap}
+  .seg{display:grid;gap:8px;margin:4px 0 0}
+  .sub{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;
+       background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:10px 13px}
+  .sub .idx{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;
+       background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+  .sub .meta{font-size:13px}
+  .sub .meta b{font-variant-numeric:tabular-nums}
+  .sub .route{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:999px;color:#fff;white-space:nowrap}
+  .sub .route.delegate{background:var(--neural)} .sub .route.reason{background:var(--tool)}
+  .sub .rm{cursor:pointer;border:none;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;border-radius:7px}
+  .sub .rm:hover{color:var(--bad);background:var(--panel)}
+  .plan-bar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--line);margin:4px 0 0;background:var(--panel-2)}
+  .plan-bar .seg-cell{display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;min-width:0;
+       overflow:hidden;white-space:nowrap;transition:flex-grow .4s cubic-bezier(.22,1,.36,1)}
+  .plan-empty{color:var(--muted);font-size:13.5px;padding:14px 2px}
+  .gain-note{margin-top:12px;padding:12px 15px;border-radius:11px;border:1px solid var(--tool);
+       background:color-mix(in srgb,var(--tool) 12%,transparent);font-size:14px}
+  .gain-note b{font-variant-numeric:tabular-nums}
+
+  /* ---------- Two theories ---------- */
+  .theory-grid{overflow-x:auto}
+  table.cmp{width:100%;border-collapse:collapse;min-width:520px}
+  table.cmp th,table.cmp td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
+  table.cmp th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+  table.cmp td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .bar{height:9px;border-radius:6px;background:var(--panel-2);overflow:hidden;min-width:90px;margin-top:5px}
+  .bar > span{display:block;height:100%;border-radius:6px;transition:width .9s cubic-bezier(.22,1,.36,1)}
+  .check{color:var(--ok);font-weight:800}
+
+  /* ---------- Quiz ---------- */
+  .quiz-card{padding:22px}
+  .quiz-q{font-size:17px;font-weight:600;margin:0 0 4px}
+  .quiz-meta{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  .quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:560px){.quiz-opts{grid-template-columns:1fr}}
+  .opt{cursor:pointer;border:1.5px solid var(--line);background:var(--panel-2);border-radius:11px;padding:14px 16px;font-weight:600;text-align:left;transition:border-color .15s,background .15s}
+  .opt:hover{border-color:var(--accent)}
+  .opt.correct{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,transparent)}
+  .opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+  .opt:disabled{cursor:default}
+  .quiz-feedback{margin-top:16px;padding:13px 15px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);font-size:14px;display:none}
+  .quiz-feedback.show{display:block}
+  .quiz-foot{display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:12px;flex-wrap:wrap}
+  .score{font-weight:700;color:var(--muted)}
+
+  /* ---------- Steps / theorem walkthrough ---------- */
+  .steps{display:grid;gap:14px}
+  .step{padding:18px 20px;display:grid;grid-template-columns:46px 1fr;gap:16px;align-items:start}
+  .step .n{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:800;
+    background:linear-gradient(92deg,var(--accent),var(--accent-2));color:#fff}
+  .step h4{margin:.1em 0 .35em;font-size:16px}
+  .step p{margin:0;color:var(--muted)}
+  .step .eq{margin-top:10px}
+
+  /* ---------- Misc ---------- */
+  .feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media (max-width:760px){.feature-grid{grid-template-columns:1fr}}
+  .feature{padding:18px}
+  .feature .ico{font-size:22px}
+  .feature h4{margin:.5em 0 .3em;font-size:15px}
+  .feature p{margin:0;color:var(--muted);font-size:13.5px}
+  footer{max-width:1180px;margin:0 auto;padding:24px 22px 60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line)}
   footer code{background:var(--panel-2);padding:1px 6px;border-radius:5px}
-  .pill{display:inline-block;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--muted);margin-right:6px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:var(--panel);border:1px solid var(--ok);color:var(--ink);padding:10px 16px;border-radius:10px;
+    box-shadow:var(--shadow);font-weight:600;font-size:13.5px;transition:opacity .2s,transform .2s;z-index:99;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body data-theme="dark">
-  <div class="toolbar">
-    <button class="btn" id="themeBtn" title="Toggle light / dark">◐ Theme</button>
-    <a class="btn" href="https://github.com/bettyguo/deterministic-horizon" target="_blank" rel="noopener">★ GitHub</a>
+
+<!-- ============================ NAV ============================ -->
+<nav>
+  <div class="nav-in">
+    <span class="brand"><span class="compass">🧭</span> Deterministic Horizon</span>
+    <div class="nav-links">
+      <a href="#explorer">Explorer</a>
+      <a href="#compare">Compare models</a>
+      <a href="#cost">Cost vs. accuracy</a>
+      <a href="#planner">Planner</a>
+      <a href="#theories">Two theories</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#math">The math</a>
+    </div>
+    <div class="nav-cta">
+      <button class="btn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light or dark theme">◐ Theme</button>
+      <a class="btn" href="https://github.com/bettyguo/deterministic-horizon" target="_blank" rel="noopener">★ GitHub</a>
+    </div>
   </div>
+</nav>
 
-  <header>
-    <div class="eyebrow">ICML 2026 · Interactive</div>
-    <h1><span class="compass">🧭</span> The Deterministic Horizon — Explorer</h1>
-    <p class="sub">Drag the decoherence parameters and watch neural chain-of-thought accuracy decay
-       with reasoning depth. The <b>Deterministic Horizon</b> <i>d*</i> — where accuracy crosses your
-       threshold — is solved in closed form, live. Past it, tool delegation wins.</p>
-  </header>
+<!-- ============================ HERO ============================ -->
+<header class="hero">
+  <div class="eyebrow">ICML 2026 · Interactive companion</div>
+  <h1>When does <span class="grad">thinking harder</span> stop helping?</h1>
+  <p class="sub">Frontier models hit a wall on deterministic state-tracking — at the same depth, across six labs.
+     We name it the <b>Deterministic Horizon</b> <span class="mono">d*</span>, derive it in closed form, and show that past it
+     <b>tool delegation</b> is not an optimization but a necessity. Drag the parameters below and watch the wall appear.</p>
+  <div class="hero-badges">
+    <span class="pill">offline · zero dependencies</span>
+    <span class="pill">1:1 with <span class="mono">deterministic_horizon.policy</span></span>
+    <span class="pill">keyboard accessible</span>
+    <span class="pill">shareable permalinks</span>
+  </div>
+</header>
 
+<!-- ============================ EXPLORER ============================ -->
+<section class="band" id="explorer">
+  <h2 class="section">Live horizon explorer</h2>
+  <p class="lead">Every number updates in real time from the paper's equations. Pick a model preset, or drag the
+     decoherence parameters to build your own. The horizon <span class="mono">d*</span> — where accuracy crosses your
+     threshold — is solved in closed form (Theorem&nbsp;4.5).</p>
   <div class="wrap">
     <!-- CONTROLS -->
-    <section class="card controls">
-      <h2>Decoherence parameters</h2>
+    <section class="card controls" aria-label="Decoherence parameters">
+      <h3>Decoherence parameters</h3>
 
       <div class="row">
-        <label for="preset">Model preset <span class="hint">paper Table 3/5</span></label>
-        <select id="preset">
+        <label for="preset">Model preset <span class="hint">paper Table&nbsp;3/5</span></label>
+        <select id="preset" aria-label="Model preset">
           <option value="custom">— custom —</option>
         </select>
       </div>
 
       <div class="row">
         <label for="eps0">ε₀ · baseline per-step error <span class="val" id="eps0v"></span></label>
-        <input type="range" id="eps0" min="0.005" max="0.05" step="0.001" />
-        <div class="hint">paper MLE 0.020 · 95% CI [0.017, 0.023]</div>
+        <input type="range" id="eps0" min="0.005" max="0.05" step="0.001" aria-describedby="eps0h" />
+        <div class="hint" id="eps0h">paper MLE 0.020 · 95% CI [0.017, 0.023]</div>
       </div>
 
       <div class="row">
         <label for="gamma">γ · attention decay rate <span class="val" id="gammav"></span></label>
-        <input type="range" id="gamma" min="0.02" max="0.40" step="0.005" />
-        <div class="hint">shared across models · paper 0.15</div>
+        <input type="range" id="gamma" min="0.02" max="0.40" step="0.005" aria-describedby="gammah" />
+        <div class="hint" id="gammah">shared across models · paper 0.15</div>
       </div>
 
       <div class="row">
         <label for="leff">L_eff · effective decoherence length <span class="val" id="leffv"></span></label>
-        <input type="range" id="leff" min="40" max="600" step="1" />
-        <div class="hint">O(10²) steps — <i>not</i> the raw context window O(10⁵)</div>
+        <input type="range" id="leff" min="40" max="600" step="1" aria-describedby="leffh" />
+        <div class="hint" id="leffh">O(10²) steps — <i>not</i> the raw context window O(10⁵)</div>
       </div>
 
       <div class="row">
         <label for="alpha">α · success threshold <span class="val" id="alphav"></span></label>
-        <input type="range" id="alpha" min="0.1" max="0.9" step="0.01" />
-        <div class="hint">depth where P(correct)=α defines d*</div>
+        <input type="range" id="alpha" min="0.1" max="0.9" step="0.01" aria-describedby="alphah" />
+        <div class="hint" id="alphah">depth where P(correct)=α defines d*</div>
       </div>
 
       <div class="row">
         <label for="tool">tool accuracy (C3) <span class="val" id="toolv"></span></label>
-        <input type="range" id="tool" min="0.5" max="1.0" step="0.01" />
-        <div class="hint">empirical C3 mean ≈ 0.92</div>
+        <input type="range" id="tool" min="0.5" max="1.0" step="0.01" aria-describedby="toolh" />
+        <div class="hint" id="toolh">empirical C3 mean ≈ 0.92</div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="shareBtn" title="Copy a permalink to this exact configuration">🔗 Copy link</button>
+        <button class="btn" id="pngBtn" title="Download the chart as a PNG">⬇ PNG</button>
+        <button class="btn" id="resetBtn" title="Reset to GPT-4o defaults">↺ Reset</button>
       </div>
     </section>
 
     <!-- VISUAL -->
-    <section class="card viz">
-      <h2>Accuracy vs. reasoning depth</h2>
-      <div class="stats">
-        <div class="stat"><div class="k">Deterministic Horizon</div><div class="v" id="dstar">—</div></div>
-        <div class="stat"><div class="k">P(correct) at d*</div><div class="v" id="patd">—</div></div>
-        <div class="stat"><div class="k">Tool advantage past d*</div><div class="v" id="adv">—</div></div>
+    <section class="card viz" aria-label="Accuracy versus reasoning depth">
+      <h3>Accuracy vs. reasoning depth</h3>
+      <div class="stats" aria-live="polite">
+        <div class="stat hz"><div class="k">Deterministic Horizon</div><div class="v" id="dstar">—</div></div>
+        <div class="stat neural"><div class="k">Neural at d*+5</div><div class="v" id="patd">—</div></div>
+        <div class="stat tool"><div class="k">Tool advantage past d*</div><div class="v" id="adv">—</div></div>
       </div>
 
-      <canvas id="plot" width="760" height="420" aria-label="Accuracy decay curve"></canvas>
+      <div class="canvas-wrap">
+        <canvas id="plot" width="760" height="420" tabindex="0" role="img" aria-label="Neural chain-of-thought accuracy decay curve with the tool baseline and the horizon marker. Focus and use the left and right arrow keys to move the depth probe; the decision below updates live."></canvas>
+        <div id="tooltip" role="status"></div>
+      </div>
       <div class="legend">
-        <span><i style="border-color:var(--neural)"></i>Neural CoT  P(d)=exp(−dε₀−γd(d+1)/2L_eff)</span>
+        <span><i style="border-color:var(--neural)"></i>Neural CoT&nbsp; P(d)=exp(−dε₀−γd(d+1)/2L_eff)</span>
         <span><i style="border-color:var(--tool);border-top-style:dashed"></i>Tool-integrated (C3)</span>
         <span><i style="border-color:var(--horizon);border-top-style:dotted"></i>Horizon d*</span>
+      </div>
+      <p class="hint" style="margin:8px 2px 0">Hover or drag across the chart (works on touch too) to probe any depth — or click it and use <span class="mono">←</span>/<span class="mono">→</span> (<span class="mono">Shift</span> = ±5). The shaded bands show where the policy says <span style="color:var(--tool)">reason</span> vs. <span style="color:var(--neural)">delegate</span>.</p>
+
+      <!-- SENSITIVITY (what moves d*) -->
+      <div class="sens">
+        <h3>What moves the horizon?</h3>
+        <p class="cap">How far <span class="mono">d*</span> shifts when each parameter is nudged ±20% from your current
+           setting — the longest bar is the lever that matters most. Updates as you drag.</p>
+        <div id="sensRows" aria-live="polite"></div>
       </div>
 
       <!-- DELEGATION CALCULATOR -->
       <div class="calc">
-        <h2>Delegation decision</h2>
+        <h3>Delegation decision</h3>
         <div class="field">
           <span>If my next subproblem is</span>
-          <input type="number" id="depth" min="0" max="200" value="30" />
+          <input type="number" id="depth" min="0" max="200" value="30" aria-label="estimated depth in steps" />
           <span>state-tracking steps deep →</span>
         </div>
-        <div class="verdict" id="verdict"></div>
+        <div class="verdict" id="verdict" role="status" aria-live="polite"></div>
         <div class="eq" id="eqline"></div>
+        <div class="actions">
+          <button class="btn primary" id="copyPyBtn" title="Copy the equivalent Python call">⧉ Copy Python</button>
+        </div>
       </div>
     </section>
   </div>
+</section>
 
-  <footer>
-    <p><span class="pill">offline</span><span class="pill">no dependencies</span>
-       Mirrors <code>deterministic_horizon.policy</code> exactly:
-       <code>expected_neural_accuracy</code>, <code>horizon_for</code>, <code>should_delegate</code>.</p>
-    <p>Read the <a href="https://github.com/bettyguo/deterministic-horizon/blob/main/docs/when-to-delegate.md">delegation guide</a> ·
-       <a href="https://github.com/bettyguo/deterministic-horizon/blob/main/docs/theorem-cheatsheet.md">theorem cheat-sheet</a> ·
-       <a href="https://github.com/bettyguo/deterministic-horizon#readme">project README</a> ·
-       <a href="https://github.com/bettyguo/deterministic-horizon">source</a>.
-       Theory: Definition 4.1 / Theorems 4.2 &amp; 4.5.</p>
-  </footer>
+<!-- ============================ MODEL COMPARISON ============================ -->
+<section class="band" id="compare">
+  <h2 class="section">Why some models reach further</h2>
+  <p class="lead">All twelve models fail — but not at the same depth. Lower baseline error <span class="mono">ε₀</span> and a
+     longer effective decoherence length <span class="mono">L_eff</span> push the horizon out. Toggle models to overlay their
+     decay curves; the marker on each curve is that model's measured <span class="mono">d*</span>.</p>
+  <div class="card viz">
+    <div class="model-toggles" id="cmpToggles" role="group" aria-label="Toggle model curves"></div>
+    <div class="canvas-wrap">
+      <canvas id="cmpPlot" width="1100" height="440" tabindex="0" role="img" aria-label="Decay curves for every model preset. Focus and use the left and right arrow keys to scrub depth; a live ranking of every model's accuracy at that depth is announced."></canvas>
+      <div id="cmpTip" role="status" aria-live="polite" style="position:absolute;pointer-events:none;opacity:0"></div>
+    </div>
+    <p class="hint" style="margin-top:10px">Curves use each model's paper <span class="mono">d*</span> with γ=0.15 and the
+       calibrated <span class="mono">L_eff</span> (so each crosses 50% exactly at its horizon). The dashed line is the
+       cross-domain tool mean (92%): past every model's <span class="mono">d*</span>, the tool wins.</p>
+  </div>
+</section>
+
+<!-- ============================ COST vs ACCURACY ============================ -->
+<section class="band" id="cost">
+  <h2 class="section">The economics: cost per correct solution</h2>
+  <p class="lead">"Think harder" isn't free — deeper chains burn more tokens <i>and</i> succeed less often, so the
+     <b>cost per correct answer</b> explodes past the horizon. A tool pays a flat call cost at near-constant accuracy.
+     This is why the paper measures a <b>4.2–4.7×</b> efficiency gain. (Illustrative cost model; drag to explore.)</p>
+  <div class="wrap">
+    <section class="card controls" aria-label="Cost parameters">
+      <h3>Cost assumptions</h3>
+      <div class="row">
+        <label for="ctool">tool call cost <span class="val" id="ctoolv"></span></label>
+        <input type="range" id="ctool" min="0.2" max="5" step="0.1" />
+        <div class="hint">× one CoT step, e.g. a BFS/SQL/verifier call</div>
+      </div>
+      <div class="row">
+        <label for="cretry">retries on neural failure <span class="val" id="cretryv"></span></label>
+        <input type="range" id="cretry" min="1" max="5" step="1" />
+        <div class="hint">attempts before falling back — multiplies CoT cost</div>
+      </div>
+      <div class="stats" style="grid-template-columns:1fr 1fr;margin-top:6px">
+        <div class="stat neural"><div class="k">Crossover depth</div><div class="v" id="costCross">—</div></div>
+        <div class="stat tool"><div class="k">Max efficiency gain</div><div class="v" id="costGain">—</div></div>
+      </div>
+    </section>
+    <section class="card viz" aria-label="Cost per correct solution versus depth">
+      <h3>Relative cost per correct solution</h3>
+      <div class="canvas-wrap"><canvas id="costPlot" width="760" height="380" aria-label="Relative cost per correct solution versus reasoning depth, for neural chain-of-thought against a flat tool cost"></canvas><div id="costTip" role="status"></div></div>
+      <div class="legend">
+        <span><i style="border-color:var(--neural)"></i>Neural CoT (cost ÷ accuracy)</span>
+        <span><i style="border-color:var(--tool);border-top-style:dashed"></i>Tool (flat)</span>
+        <span><i style="border-color:var(--accent);border-top-style:dotted"></i>Cost crossover</span>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- ============================ DECOMPOSITION PLANNER ============================ -->
+<section class="band" id="planner">
+  <h2 class="section">Plan a whole decomposition</h2>
+  <p class="lead">Real agents don't face one subproblem — they decompose a goal into many. A plan only succeeds if
+     <i>every</i> step does, so success probabilities <b>multiply</b>, and a single deep step can sink the whole chain.
+     Add the estimated depths of your sub-goals, pick the model in the loop, and watch the policy route each one —
+     this is <span class="mono">should_delegate_batch()</span> made visible.</p>
+  <div class="wrap">
+    <section class="card controls" aria-label="Plan inputs">
+      <h3>Build your decomposition</h3>
+      <div class="row">
+        <label for="planModel">Model in the loop</label>
+        <select id="planModel" aria-label="Model for the plan"></select>
+      </div>
+      <div class="row">
+        <label for="planDepth">Add a sub-goal of depth</label>
+        <div class="plan-add">
+          <input type="number" id="planDepth" min="0" max="200" value="14" aria-label="sub-goal depth in steps" />
+          <button class="btn primary" id="planAdd">＋ Add step</button>
+        </div>
+        <div class="hint" style="margin-top:8px">Quick presets:</div>
+        <div class="plan-add quick" style="margin-top:6px" id="planQuick"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="planClear" title="Remove all steps">↺ Clear</button>
+        <button class="btn" id="planCopyBtn" title="Copy the equivalent Python">⧉ Copy Python</button>
+      </div>
+    </section>
+
+    <section class="card viz" aria-label="Routing plan and end-to-end success">
+      <h3>Routing plan &amp; end-to-end success</h3>
+      <div class="stats">
+        <div class="stat hz"><div class="k">Steps · delegated</div><div class="v" id="planCounts">—</div></div>
+        <div class="stat neural"><div class="k">All-neural success</div><div class="v" id="planNeural">—</div></div>
+        <div class="stat tool"><div class="k">Policy-routed success</div><div class="v" id="planRouted">—</div></div>
+      </div>
+      <div class="plan-bar" id="planBar" aria-hidden="true"></div>
+      <p class="hint" style="margin:6px 2px 0">End-to-end success = product of each step's accuracy on its chosen branch
+        (<span style="color:var(--tool)">■</span> reason · <span style="color:var(--neural)">■</span> delegate).</p>
+      <div class="seg" id="planList" role="list" aria-live="polite"></div>
+      <div class="gain-note" id="planGain" style="display:none"></div>
+    </section>
+  </div>
+</section>
+
+<!-- ============================ TWO THEORIES ============================ -->
+<section class="band" id="theories">
+  <h2 class="section">Two theories, four falsifiable predictions</h2>
+  <p class="lead">Prior work blames a trained <b>Simplicity Bias</b> (a preference fine-tuning should fix). This paper
+     argues for an architectural <b>Decoherence</b> limit (a wall fine-tuning can't move). They disagree on four
+     measurable predictions — and the data backs the architectural one every time.</p>
+  <div class="card" style="padding:18px">
+    <div class="theory-grid">
+      <table class="cmp">
+        <thead><tr>
+          <th>Prediction</th>
+          <th>Simplicity Bias</th>
+          <th>Decoherence (this work)</th>
+          <th>Observed</th>
+        </tr></thead>
+        <tbody id="theoryBody"></tbody>
+      </table>
+    </div>
+    <p class="hint" style="margin-top:12px">Bars animate to the observed value when this section scrolls into view.
+       Every observation lands on the Decoherence side of the ledger.</p>
+  </div>
+</section>
+
+<!-- ============================ QUIZ ============================ -->
+<section class="band" id="quiz">
+  <h2 class="section">Test your intuition: think or delegate?</h2>
+  <p class="lead">Each scenario gives you a model and an estimated subproblem depth. Decide whether the agent should
+     keep reasoning or hand off to a tool — then see what <span class="mono">should_delegate()</span> actually returns.</p>
+  <div class="card quiz-card">
+    <p class="quiz-q" id="quizQ">—</p>
+    <p class="quiz-meta" id="quizMeta">—</p>
+    <div class="quiz-opts">
+      <button class="opt" id="optReason" data-choice="reason">🧠 Keep reasoning</button>
+      <button class="opt" id="optDelegate" data-choice="delegate">🛠 Delegate to tool</button>
+    </div>
+    <div class="quiz-feedback" id="quizFb" aria-live="polite"></div>
+    <div class="quiz-foot">
+      <span class="score" id="quizScore">Score: 0 / 0</span>
+      <span class="score" id="quizStreak">🔥 Streak 0 · best 0</span>
+      <button class="btn primary" id="quizNext">Next scenario →</button>
+    </div>
+    <p class="hint" style="margin:10px 2px 0">Keyboard: <span class="mono">1</span>/<span class="mono">R</span> reason · <span class="mono">2</span>/<span class="mono">D</span> delegate · <span class="mono">N</span>/<span class="mono">Enter</span> next.</p>
+  </div>
+</section>
+
+<!-- ============================ THE MATH ============================ -->
+<section class="band" id="math">
+  <h2 class="section">The theory in three steps</h2>
+  <p class="lead">No magic — just three equations. Everything in the explorer above is computed from exactly these,
+     matching <span class="mono">src/policy.py</span> line for line.</p>
+  <div class="card steps">
+    <div class="step">
+      <div class="n">1</div>
+      <div>
+        <h4>Per-step error grows with position (Definition 4.1 / Theorem 4.2)</h4>
+        <p>Each reasoning step isn't equally reliable. The error rate climbs the deeper you are in the chain, because
+           attention's usable state resolution degrades — not at the raw context length, but at the far shorter
+           <i>effective decoherence length</i> <span class="mono">L_eff</span>.</p>
+        <div class="eq matheq">
+          <math display="block" aria-label="epsilon of d equals epsilon-zero plus gamma times d over L-eff">
+            <mrow>
+              <mi>ε</mi><mo>(</mo><mi>d</mi><mo>)</mo><mo>=</mo>
+              <msub><mi>ε</mi><mn>0</mn></msub><mo>+</mo><mi>γ</mi><mo>·</mo>
+              <mfrac><mi>d</mi><msub><mi>L</mi><mtext>eff</mtext></msub></mfrac>
+            </mrow>
+          </math>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="n">2</div>
+      <div>
+        <h4>Integrate it → super-exponential decay (Theorem 4.2)</h4>
+        <p>Multiplying the per-step success probabilities along the chain gives a closed form. The quadratic term in
+           the exponent is the "wall": accuracy doesn't fade linearly, it collapses.</p>
+        <div class="eq matheq">
+          <math display="block" aria-label="P correct at depth d is approximately exp of minus d epsilon-zero minus gamma d times d plus 1 over 2 L-eff">
+            <mrow>
+              <mi>P</mi><mo>(</mo><mtext>correct&#160;at&#160;depth&#160;</mtext><mi>d</mi><mo>)</mo>
+              <mo>≈</mo><mi>exp</mi><mo>(</mo>
+              <mo>−</mo><mi>d</mi><mo>·</mo><msub><mi>ε</mi><mn>0</mn></msub><mo>−</mo>
+              <mfrac>
+                <mrow><mi>γ</mi><mo>·</mo><mi>d</mi><mo>(</mo><mi>d</mi><mo>+</mo><mn>1</mn><mo>)</mo></mrow>
+                <mrow><mn>2</mn><mo>·</mo><msub><mi>L</mi><mtext>eff</mtext></msub></mrow>
+              </mfrac><mo>)</mo>
+            </mrow>
+          </math>
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="n">3</div>
+      <div>
+        <h4>Solve P(correct)=α for the horizon (Theorem 4.5)</h4>
+        <p>Set the decay equal to your success threshold α and solve the quadratic. The positive root is the
+           <b>Deterministic Horizon</b> — a single, usable engineering number. For GPT-4o (ε₀=0.02, γ=0.15,
+           L_eff=150, α=0.5) it lands at <span class="mono">d*≈22.3</span>.</p>
+        <div class="eq matheq">
+          <math display="block" aria-label="d-star equals minus epsilon-zero L-eff plus square root of epsilon-zero squared L-eff squared plus 2 gamma L-eff natural-log of 1 over alpha, all over gamma">
+            <mrow>
+              <msup><mi>d</mi><mo>∗</mo></msup><mo>=</mo>
+              <mfrac>
+                <mrow>
+                  <mo>−</mo><msub><mi>ε</mi><mn>0</mn></msub><mo>·</mo><msub><mi>L</mi><mtext>eff</mtext></msub><mo>+</mo>
+                  <msqrt>
+                    <mrow>
+                      <msubsup><mi>ε</mi><mn>0</mn><mn>2</mn></msubsup><mo>·</mo>
+                      <msubsup><mi>L</mi><mtext>eff</mtext><mn>2</mn></msubsup><mo>+</mo>
+                      <mn>2</mn><mi>γ</mi><mo>·</mo><msub><mi>L</mi><mtext>eff</mtext></msub><mo>·</mo>
+                      <mi>ln</mi><mo>(</mo><mn>1</mn><mo>/</mo><mi>α</mi><mo>)</mo>
+                    </mrow>
+                  </msqrt>
+                </mrow>
+                <mi>γ</mi>
+              </mfrac>
+            </mrow>
+          </math>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="feature-grid" style="margin-top:18px">
+    <div class="card feature"><div class="ico">📐</div><h4>Attention Bottleneck (Thm 4.4)</h4>
+      <p>Trackable states are capped by architecture: |S| ≤ c·2^(H·log₂(L/H)·√d_h). Capacity, not training.</p></div>
+    <div class="card feature"><div class="ico">🔒</div><h4>Fine-tuning ceiling (Thm 4.7)</h4>
+      <p>Recovery is bounded by O(d*/d). Predicts &lt;5% gain; the data shows +3.2%. The wall holds.</p></div>
+    <div class="card feature"><div class="ico">🧭</div><h4>The takeaway</h4>
+      <p>Below d*, reason. Above d*, delegate. Knowing the boundary is the whole contribution.</p></div>
+  </div>
+</section>
+
+<footer>
+  <p><span class="pill">offline</span> <span class="pill">no dependencies</span>
+     This page mirrors <code>deterministic_horizon.policy</code> exactly:
+     <code>expected_neural_accuracy</code>, <code>horizon_for</code>, <code>should_delegate</code>.</p>
+  <p>Read the <a href="https://github.com/bettyguo/deterministic-horizon/blob/main/docs/when-to-delegate.md">delegation guide</a> ·
+     <a href="https://github.com/bettyguo/deterministic-horizon/blob/main/docs/theorem-cheatsheet.md">theorem cheat-sheet</a> ·
+     <a href="https://github.com/bettyguo/deterministic-horizon#readme">project README</a> ·
+     <a href="https://github.com/bettyguo/deterministic-horizon/blob/main/paper/ICML2026_DeterministicHorizon_CameraReady.pdf">paper (PDF)</a> ·
+     <a href="https://github.com/bettyguo/deterministic-horizon">source</a>.
+     Theory: Definition 4.1 / Theorems 4.2, 4.4, 4.5 &amp; 4.7.</p>
+  <p style="margin-top:14px;opacity:.8">© 2026 Dongxin Guo, Jikun Wu, Siu Ming Yiu · MIT License · Built dependency-free for the long haul.</p>
+</footer>
+
+<div class="toast" id="toast"></div>
 
 <script>
 "use strict";
-// ----- Paper-canonical math (1:1 with src/policy.py) -----------------------
+/* ===========================================================================
+ * Paper-canonical math — 1:1 with src/policy.py.
+ * (test_explorer_sync.py parses the MODELS block below; keep the format.)
+ * ======================================================================== */
 const GAMMA_DEFAULT = 0.15;
 // Per-model (ε₀, d*) from policy._MODEL_EPS0_DSTAR
 const MODELS = {
@@ -187,6 +655,7 @@ const MODELS = {
   "default":         [0.020, 24.0],
 };
 const TOOL_DEFAULT = 0.92, ALPHA_DEFAULT = 0.5;
+const PREFERS_REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // P(correct at depth d) — Theorem 4.2
 function pCorrect(d, eps0, gamma, leff){
@@ -203,17 +672,42 @@ function horizon(eps0, gamma, leff, alpha){
   return (-eps0*leff + Math.sqrt(disc))/gamma;
 }
 
-// ----- State ---------------------------------------------------------------
+const el = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+// memoised theme-colour reads — getComputedStyle is a reflow; cache per theme.
+let _cssCache={};
+function cssVar(n){ const c=_cssCache[n]; if(c!==undefined) return c;
+  return (_cssCache[n]=getComputedStyle(document.body).getPropertyValue(n).trim()); }
+function invalidateThemeCache(){ _cssCache={}; }
+
+function toast(msg){
+  const t = el("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("show"), 1600);
+}
+function flashCopied(btn, label){
+  const orig = btn.textContent;
+  btn.textContent = label || "✓ Copied"; btn.classList.add("copied");
+  setTimeout(()=>{ btn.textContent = orig; btn.classList.remove("copied"); }, 1400);
+}
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    const ta=document.createElement("textarea"); ta.value=text; ta.style.position="fixed";
+    ta.style.opacity="0"; document.body.appendChild(ta); ta.select();
+    let ok=false; try{ ok=document.execCommand("copy"); }catch(_){}
+    document.body.removeChild(ta); return ok;
+  }
+}
+
+/* ===========================================================================
+ * Section 1 — Explorer
+ * ======================================================================== */
 const S = {eps0:0.020, gamma:0.15, leff:lEffFor(0.020,22.0,0.5), alpha:0.5, tool:0.92};
 
-// ----- Wire up controls ----------------------------------------------------
-const el = id => document.getElementById(id);
 const presetSel = el("preset");
 for(const name of Object.keys(MODELS)){
-  const o=document.createElement("option");
-  o.value=name; o.textContent=name; presetSel.appendChild(o);
+  const o=document.createElement("option"); o.value=name; o.textContent=name; presetSel.appendChild(o);
 }
-presetSel.value="gpt-4o";
 
 const sliders = {
   eps0:{node:el("eps0"),lbl:el("eps0v"),fmt:v=>v.toFixed(3)},
@@ -223,37 +717,33 @@ const sliders = {
   tool:{node:el("tool"),lbl:el("toolv"),fmt:v=>Math.round(v*100)+"%"},
 };
 function syncSlider(key){
-  const s=sliders[key]; s.node.value=S[key];
-  s.lbl.textContent=s.fmt(S[key]);
+  const s=sliders[key]; s.node.value=S[key]; s.lbl.textContent=s.fmt(S[key]);
   const min=+s.node.min, max=+s.node.max;
-  s.node.style.setProperty("--pct", ((S[key]-min)/(max-min)*100)+"%");
+  s.node.style.setProperty("--pct", (clamp((S[key]-min)/(max-min),0,1)*100)+"%");
 }
-function applyPreset(name){
+function applyPreset(name, doRender=true){
   if(name==="custom") return;
   const [eps0,dstar]=MODELS[name];
-  S.eps0=eps0; S.gamma=GAMMA_DEFAULT; S.alpha=0.5;
+  S.eps0=eps0; S.gamma=GAMMA_DEFAULT; S.alpha=0.5; S.tool=0.92;
   S.leff=lEffFor(eps0,dstar,0.5);
   for(const k of Object.keys(sliders)) syncSlider(k);
-  render();
+  if(doRender) render();
 }
-presetSel.addEventListener("change",e=>applyPreset(e.target.value));
+presetSel.addEventListener("change",e=>{ applyPreset(e.target.value); updateHash(); });
 
 for(const key of Object.keys(sliders)){
   sliders[key].node.addEventListener("input",e=>{
     S[key]=+e.target.value; sliders[key].lbl.textContent=sliders[key].fmt(S[key]);
     const min=+e.target.min,max=+e.target.max;
-    e.target.style.setProperty("--pct",((S[key]-min)/(max-min)*100)+"%");
-    presetSel.value="custom"; render();
+    e.target.style.setProperty("--pct",(clamp((S[key]-min)/(max-min),0,1)*100)+"%");
+    presetSel.value="custom"; render(); updateHash();
   });
 }
-el("depth").addEventListener("input",renderVerdict);
-el("themeBtn").addEventListener("click",()=>{
-  const b=document.body; b.dataset.theme = b.dataset.theme==="dark"?"light":"dark"; render();
-});
+el("depth").addEventListener("input",()=>{ renderVerdict(); updateHash(); });
 
-// ----- Canvas plot ---------------------------------------------------------
+// ---- Explorer canvas ----
 const cv=el("plot"), ctx=cv.getContext("2d");
-function cssVar(n){return getComputedStyle(document.body).getPropertyValue(n).trim();}
+let plotGeom=null; // saved for hover hit-testing
 function drawPlot(){
   const DPR=window.devicePixelRatio||1, W=cv.clientWidth||760, H=420;
   cv.width=W*DPR; cv.height=H*DPR; cv.style.height=H+"px";
@@ -261,10 +751,23 @@ function drawPlot(){
   const m={l:52,r:18,t:16,b:42}, pw=W-m.l-m.r, ph=H-m.t-m.b;
   const Dmax=Math.max(50, Math.ceil((S.leff>0?horizon(S.eps0,S.gamma,S.leff,0.05):50)/10)*10);
   const x=d=>m.l + d/Dmax*pw, y=p=>m.t + (1-p)*ph;
+  plotGeom={m,pw,ph,Dmax,x,y,H,W};
   const ink=cssVar("--ink"),muted=cssVar("--muted"),grid=cssVar("--grid"),
         neural=cssVar("--neural"),tool=cssVar("--tool"),hz=cssVar("--horizon");
 
-  // grid + axes
+  // reason zone (left of d*) vs delegate zone (right of d*) — the whole lesson, at a glance
+  const dstar=horizon(S.eps0,S.gamma,S.leff,S.alpha);
+  if(isFinite(dstar)&&dstar>0){
+    const dz=clamp(dstar,0,Dmax);
+    ctx.globalAlpha=.07;
+    ctx.fillStyle=tool;   ctx.fillRect(m.l, m.t, x(dz)-m.l, ph);
+    ctx.fillStyle=neural; ctx.fillRect(x(dz), m.t, (m.l+pw)-x(dz), ph);
+    ctx.globalAlpha=1;
+    ctx.font="700 11px system-ui"; ctx.textBaseline="top";
+    if(x(dz)-m.l>78){ ctx.fillStyle=tool;   ctx.textAlign="left";  ctx.fillText("✓ reason here", m.l+8, m.t+6); }
+    if((m.l+pw)-x(dz)>86){ ctx.fillStyle=neural; ctx.textAlign="right"; ctx.fillText("delegate here →", m.l+pw-8, m.t+6); }
+  }
+
   ctx.strokeStyle=grid; ctx.fillStyle=muted; ctx.lineWidth=1; ctx.font="11px system-ui";
   ctx.textAlign="right"; ctx.textBaseline="middle";
   for(let p=0;p<=1;p+=0.25){ const yy=y(p); ctx.beginPath();ctx.moveTo(m.l,yy);ctx.lineTo(W-m.r,yy);ctx.stroke();
@@ -277,24 +780,28 @@ function drawPlot(){
   // tool line
   ctx.strokeStyle=tool; ctx.setLineDash([7,5]); ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(m.l,y(S.tool));ctx.lineTo(W-m.r,y(S.tool));ctx.stroke(); ctx.setLineDash([]);
-
+  ctx.fillStyle=tool; ctx.font="700 11px system-ui"; ctx.textAlign="right"; ctx.textBaseline="bottom";
+  ctx.fillText("tool "+(S.tool*100).toFixed(0)+"%", W-m.r-4, y(S.tool)-3);
   // threshold line
   ctx.strokeStyle=muted; ctx.globalAlpha=.5; ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(m.l,y(S.alpha));ctx.lineTo(W-m.r,y(S.alpha));ctx.stroke(); ctx.globalAlpha=1;
+  ctx.fillStyle=muted; ctx.font="11px system-ui"; ctx.textAlign="right"; ctx.textBaseline="bottom";
+  ctx.fillText("α "+(S.alpha*100).toFixed(0)+"%", W-m.r-4, y(S.alpha)-3);
 
-  // neural decay curve (filled)
+  // neural decay (filled + line)
   ctx.beginPath();
   for(let i=0;i<=pw;i++){ const d=i/pw*Dmax, p=pCorrect(d,S.eps0,S.gamma,S.leff);
     i?ctx.lineTo(x(d),y(p)):ctx.moveTo(x(d),y(p)); }
   ctx.lineTo(x(Dmax),y(0)); ctx.lineTo(x(0),y(0)); ctx.closePath();
-  ctx.fillStyle=neural; ctx.globalAlpha=.10; ctx.fill(); ctx.globalAlpha=1;
+  const ng=ctx.createLinearGradient(0,m.t,0,H-m.b);
+  ng.addColorStop(0,neural); ng.addColorStop(1,"transparent");
+  ctx.globalAlpha=.20; ctx.fillStyle=ng; ctx.fill(); ctx.globalAlpha=1;
   ctx.beginPath();
   for(let i=0;i<=pw;i++){ const d=i/pw*Dmax, p=pCorrect(d,S.eps0,S.gamma,S.leff);
     i?ctx.lineTo(x(d),y(p)):ctx.moveTo(x(d),y(p)); }
-  ctx.strokeStyle=neural; ctx.lineWidth=2.6; ctx.stroke();
+  ctx.strokeStyle=neural; ctx.lineWidth=2.6; ctx.lineJoin="round"; ctx.lineCap="round"; ctx.stroke();
 
   // horizon marker
-  const dstar=horizon(S.eps0,S.gamma,S.leff,S.alpha);
   if(isFinite(dstar)&&dstar>0&&dstar<=Dmax){
     ctx.strokeStyle=hz; ctx.setLineDash([3,3]); ctx.lineWidth=1.8;
     ctx.beginPath();ctx.moveTo(x(dstar),m.t);ctx.lineTo(x(dstar),H-m.b);ctx.stroke();ctx.setLineDash([]);
@@ -305,19 +812,52 @@ function drawPlot(){
   // user-depth marker
   const ud=+el("depth").value;
   if(ud>=0&&ud<=Dmax){ const px=x(ud),py=y(pCorrect(ud,S.eps0,S.gamma,S.leff));
-    ctx.fillStyle=ink; ctx.beginPath();ctx.arc(px,py,4,0,7);ctx.fill();
-    ctx.strokeStyle=ink; ctx.globalAlpha=.3;ctx.setLineDash([2,3]);
+    ctx.strokeStyle=ink; ctx.globalAlpha=.3; ctx.setLineDash([2,3]); ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px,H-m.b);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+    ctx.fillStyle=cssVar("--panel"); ctx.beginPath();ctx.arc(px,py,5.5,0,7);ctx.fill();   // halo
+    ctx.fillStyle=ink; ctx.beginPath();ctx.arc(px,py,3.5,0,7);ctx.fill();                 // probe dot
+    ctx.font="700 11px system-ui"; ctx.textBaseline="bottom"; ctx.fillStyle=ink;
+    const lbl="d="+ud, tw=ctx.measureText(lbl).width;
+    ctx.textAlign = (px+tw+12>W-m.r) ? "right" : "left";
+    ctx.fillText(lbl, px+(ctx.textAlign==="right"?-9:9), py-8);
   }
 }
 
-// ----- Stats + verdict -----------------------------------------------------
+// hover tooltip on the explorer plot
+const tip = el("tooltip");
+cv.addEventListener("pointermove", ev=>{
+  if(!plotGeom) return;
+  const r=cv.getBoundingClientRect(), mx=ev.clientX-r.left;
+  const {m,pw,Dmax,y,H} = plotGeom;
+  if(mx<m.l||mx>m.l+pw){ tip.style.opacity=0; return; }
+  const d=clamp((mx-m.l)/pw*Dmax, 0, Dmax);
+  const p=pCorrect(d,S.eps0,S.gamma,S.leff);
+  const past=d>=horizon(S.eps0,S.gamma,S.leff,S.alpha);
+  tip.style.opacity=1;
+  tip.style.left=clamp(mx+12,0,plotGeom.W-150)+"px";
+  tip.style.top=clamp(y(p)-52,4,H-64)+"px";
+  tip.innerHTML=`depth <b>d=${d.toFixed(0)}</b><br>neural <b>${(p*100).toFixed(1)}%</b> · tool <b>${(S.tool*100).toFixed(0)}%</b>`+
+    `<br><span style="color:${past?'var(--neural)':'var(--tool)'}">${past?'→ delegate':'✓ reason'}</span>`;
+});
+cv.addEventListener("pointerleave", ()=>{ tip.style.opacity=0; });
+// keyboard: move the depth probe with the arrow keys (Shift = ±5) — full no-mouse access
+cv.addEventListener("keydown", ev=>{
+  if(ev.key!=="ArrowLeft"&&ev.key!=="ArrowRight"&&ev.key!=="Home"&&ev.key!=="End") return;
+  ev.preventDefault();
+  const dn=el("depth"); let v=+dn.value||0;
+  const step=ev.shiftKey?5:1;
+  if(ev.key==="ArrowRight") v+=step; else if(ev.key==="ArrowLeft") v-=step;
+  else if(ev.key==="Home") v=0; else if(ev.key==="End") v=Math.round(horizon(S.eps0,S.gamma,S.leff,S.alpha))+5;
+  dn.value=clamp(v,0,200); renderVerdict(); updateHash();
+});
+
 function renderStats(){
   const dstar=horizon(S.eps0,S.gamma,S.leff,S.alpha);
   el("dstar").innerHTML = (isFinite(dstar)&&dstar>0)? dstar.toFixed(1)+' <small>steps</small>' : '—';
-  el("patd").innerHTML = (S.alpha*100).toFixed(0)+'<small>%</small>';
-  const past = Math.max(0, S.tool - pCorrect(dstar+5,S.eps0,S.gamma,S.leff));
-  el("adv").innerHTML = '+'+(past*100).toFixed(0)+'<small> pts @ d*+5</small>';
+  const nAt = pCorrect(dstar+5,S.eps0,S.gamma,S.leff);
+  el("patd").innerHTML = (nAt*100).toFixed(0)+'<small>% acc</small>';
+  const past = Math.max(0, S.tool - nAt);
+  el("adv").innerHTML = '+'+(past*100).toFixed(0)+'<small> pts</small>';
 }
 function renderVerdict(){
   const d=+el("depth").value;
@@ -340,12 +880,502 @@ function renderVerdict(){
     `should_delegate(estimated_depth=${d}, eps0=${S.eps0.toFixed(3)}, l_eff=${Math.round(S.leff)}) → ${delegate}   #reason=${reason}`;
   drawPlot();
 }
-function render(){ renderStats(); renderVerdict(); /* draws plot */ }
+// Tornado sensitivity: how far d* moves when each parameter is nudged ±20%.
+const SENS_RANGE={eps0:[0.005,0.05],gamma:[0.02,0.40],leff:[40,600],alpha:[0.1,0.9]};
+const SENS_LABEL={eps0:"ε₀ baseline error",gamma:"γ decay rate",leff:"L_eff length",alpha:"α threshold"};
+function renderSens(){
+  const rows=Object.keys(SENS_RANGE).map(k=>{
+    const loV=clamp(S[k]*0.8,SENS_RANGE[k][0],SENS_RANGE[k][1]);
+    const hiV=clamp(S[k]*1.2,SENS_RANGE[k][0],SENS_RANGE[k][1]);
+    const at=v=>{ const s=Object.assign({},S); s[k]=v; return horizon(s.eps0,s.gamma,s.leff,s.alpha); };
+    const a=at(loV), b=at(hiV), lo=Math.min(a,b), hi=Math.max(a,b);
+    return {label:SENS_LABEL[k], lo, hi, span:hi-lo};
+  }).filter(r=>isFinite(r.span)&&r.lo>0).sort((x,y)=>y.span-x.span);
+  const maxSpan=Math.max(...rows.map(r=>r.span), 1e-6);
+  el("sensRows").innerHTML=rows.map(r=>
+    `<div class="sens-row"><span class="sens-k">${r.label}</span>`+
+    `<span class="sens-bar"><span style="width:${(r.span/maxSpan*100).toFixed(0)}%"></span></span>`+
+    `<span class="sens-v">${r.lo.toFixed(1)}→${r.hi.toFixed(1)} <b>Δ${r.span.toFixed(1)}</b></span></div>`
+  ).join("");
+}
+function render(){ renderStats(); renderVerdict(); renderSens(); }
 
-// ----- Init ----------------------------------------------------------------
-for(const k of Object.keys(sliders)) syncSlider(k);
-applyPreset("gpt-4o");
-window.addEventListener("resize",render);
+// ---- Explorer actions ----
+el("themeBtn").addEventListener("click",()=>{
+  const b=document.body; b.dataset.theme = b.dataset.theme==="dark"?"light":"dark";
+  try{ localStorage.setItem("dh-theme", b.dataset.theme); }catch(_){}
+  invalidateThemeCache();
+  render(); drawCompare(); drawCost(); renderPlan();
+});
+el("resetBtn").addEventListener("click",()=>{
+  presetSel.value="gpt-4o"; el("depth").value=30; applyPreset("gpt-4o"); updateHash(); toast("Reset to GPT-4o defaults");
+});
+el("pngBtn").addEventListener("click",()=>{
+  const a=document.createElement("a");
+  a.download="deterministic-horizon.png"; a.href=cv.toDataURL("image/png"); a.click();
+  toast("Chart downloaded");
+});
+el("shareBtn").addEventListener("click",async()=>{
+  updateHash();
+  const ok=await copyText(location.href);
+  if(ok){ flashCopied(el("shareBtn"),"✓ Link copied"); } else { toast("Copy failed — select the URL bar"); }
+});
+el("copyPyBtn").addEventListener("click",async()=>{
+  const d=+el("depth").value;
+  const model = presetSel.value==="custom" ? "default" : presetSel.value;
+  // For a custom (ε₀, L_eff) point there is no model preset, so emit runnable
+  // code against the public expected_neural_accuracy(...) API — should_delegate
+  // takes a model, not raw decoherence params, so the old snippet didn't run.
+  const accNow=pCorrect(d,S.eps0,S.gamma,S.leff);
+  const delegateNow = accNow<S.alpha || (S.tool-accNow)>0.10;
+  const py = presetSel.value==="custom"
+    ? `from deterministic_horizon import expected_neural_accuracy\n`+
+      `acc = expected_neural_accuracy(${d}, eps0=${S.eps0.toFixed(3)}, l_eff=${Math.round(S.leff)})\n`+
+      `delegate = acc < ${S.alpha.toFixed(2)} or (${S.tool.toFixed(2)} - acc) > 0.10\n`+
+      `# acc ≈ ${(accNow*100).toFixed(0)}%  →  ${delegateNow?"delegate":"reason"}`
+    : `from deterministic_horizon import delegation_decision\n`+
+      `d = delegation_decision(estimated_depth=${d}, model="${model}")\n`+
+      `print(d.explain())  # → ${d>=horizon(S.eps0,S.gamma,S.leff,S.alpha)?"delegate":"reason"}`;
+  const ok=await copyText(py);
+  if(ok) flashCopied(el("copyPyBtn"),"✓ Copied"); else toast("Copy failed");
+});
+
+// ---- Permalink state (hash) ----
+function updateHash(){
+  const p=new URLSearchParams();
+  p.set("model",presetSel.value);
+  p.set("eps0",S.eps0.toFixed(3)); p.set("gamma",S.gamma.toFixed(3));
+  p.set("leff",Math.round(S.leff)); p.set("alpha",S.alpha.toFixed(2));
+  p.set("tool",S.tool.toFixed(2)); p.set("depth",el("depth").value);
+  history.replaceState(null,"","#"+p.toString());
+}
+function loadHash(){
+  if(!location.hash || location.hash.length<2) return false;
+  const p=new URLSearchParams(location.hash.slice(1));
+  const num=(k,def)=>{ const v=parseFloat(p.get(k)); return isFinite(v)?v:def; };
+  if(p.get("model") && MODELS[p.get("model")]) presetSel.value=p.get("model"); else presetSel.value="custom";
+  S.eps0=clamp(num("eps0",S.eps0),0.005,0.05);
+  S.gamma=clamp(num("gamma",S.gamma),0.02,0.40);
+  S.leff=clamp(num("leff",S.leff),40,600);
+  S.alpha=clamp(num("alpha",S.alpha),0.1,0.9);
+  S.tool=clamp(num("tool",S.tool),0.5,1.0);
+  if(p.get("depth")!=null) el("depth").value=clamp(num("depth",30),0,200);
+  for(const k of Object.keys(sliders)) syncSlider(k);
+  return true;
+}
+
+/* ===========================================================================
+ * Section 2 — Model comparison
+ * ======================================================================== */
+const CMP_COLORS = ["#4ea1ff","#8a4fff","#34c759","#ffb454","#ff5d52","#39c5cf","#f778ba","#a3b3c2"];
+const cmpModels = Object.keys(MODELS).filter(m=>m!=="default");
+const cmpOn = Object.fromEntries(cmpModels.map(m=>[m,true]));
+const cmpColor = Object.fromEntries(cmpModels.map((m,i)=>[m,CMP_COLORS[i%CMP_COLORS.length]]));
+
+(function buildCmpToggles(){
+  const box=el("cmpToggles");
+  for(const m of cmpModels){
+    const b=document.createElement("button");
+    b.className="chip"; b.setAttribute("aria-pressed","true"); b.dataset.model=m;
+    b.innerHTML=`<span class="dot" style="background:${cmpColor[m]}"></span>${m}`;
+    b.addEventListener("click",()=>{
+      cmpOn[m]=!cmpOn[m]; b.setAttribute("aria-pressed",String(cmpOn[m])); drawCompare();
+    });
+    box.appendChild(b);
+  }
+})();
+
+const cmpCv=el("cmpPlot"), cmpCtx=cmpCv.getContext("2d"), cmpTip=el("cmpTip");
+let cmpGeom=null, cmpHoverD=null;
+function drawCompare(){
+  const DPR=window.devicePixelRatio||1, W=cmpCv.clientWidth||1100, H=440;
+  cmpCv.width=W*DPR; cmpCv.height=H*DPR; cmpCv.style.height=H+"px";
+  cmpCtx.setTransform(DPR,0,0,DPR,0,0); cmpCtx.clearRect(0,0,W,H);
+  const m={l:52,r:120,t:16,b:42}, pw=W-m.l-m.r, ph=H-m.t-m.b;
+  const Dmax=60;
+  const x=d=>m.l + d/Dmax*pw, y=p=>m.t + (1-p)*ph;
+  cmpGeom={m,pw,ph,Dmax,x,y,H,W};
+  const muted=cssVar("--muted"),grid=cssVar("--grid"),tool=cssVar("--tool"),ink=cssVar("--ink");
+
+  cmpCtx.strokeStyle=grid; cmpCtx.fillStyle=muted; cmpCtx.lineWidth=1; cmpCtx.font="11px system-ui";
+  cmpCtx.textAlign="right"; cmpCtx.textBaseline="middle";
+  for(let p=0;p<=1;p+=0.25){ const yy=y(p); cmpCtx.beginPath();cmpCtx.moveTo(m.l,yy);cmpCtx.lineTo(W-m.r,yy);cmpCtx.stroke();
+    cmpCtx.fillText((p*100).toFixed(0)+"%",m.l-8,yy); }
+  cmpCtx.textAlign="center"; cmpCtx.textBaseline="top";
+  for(let d=0;d<=Dmax;d+=10){ const xx=x(d); cmpCtx.beginPath();cmpCtx.moveTo(xx,m.t);cmpCtx.lineTo(xx,H-m.b);cmpCtx.strokeStyle=grid;cmpCtx.stroke();
+    cmpCtx.fillStyle=muted; cmpCtx.fillText(d,xx,H-m.b+6); }
+  cmpCtx.fillStyle=muted; cmpCtx.fillText("reasoning depth  d",m.l+pw/2,H-m.b+22);
+
+  // hover scrubber (drawn under the curves)
+  if(cmpHoverD!=null){
+    cmpCtx.strokeStyle=ink; cmpCtx.globalAlpha=.28; cmpCtx.lineWidth=1.4; cmpCtx.setLineDash([3,3]);
+    cmpCtx.beginPath();cmpCtx.moveTo(x(cmpHoverD),m.t);cmpCtx.lineTo(x(cmpHoverD),H-m.b);cmpCtx.stroke();
+    cmpCtx.setLineDash([]); cmpCtx.globalAlpha=1;
+  }
+
+  // tool baseline
+  cmpCtx.strokeStyle=tool; cmpCtx.setLineDash([7,5]); cmpCtx.lineWidth=1.6;
+  cmpCtx.beginPath();cmpCtx.moveTo(m.l,y(TOOL_DEFAULT));cmpCtx.lineTo(W-m.r,y(TOOL_DEFAULT));cmpCtx.stroke();cmpCtx.setLineDash([]);
+  cmpCtx.fillStyle=tool; cmpCtx.textAlign="left"; cmpCtx.textBaseline="middle";
+  cmpCtx.fillText("tool 92%", W-m.r+6, y(TOOL_DEFAULT));
+
+  // threshold
+  cmpCtx.strokeStyle=muted; cmpCtx.globalAlpha=.4;
+  cmpCtx.beginPath();cmpCtx.moveTo(m.l,y(0.5));cmpCtx.lineTo(W-m.r,y(0.5));cmpCtx.stroke();cmpCtx.globalAlpha=1;
+
+  for(const name of cmpModels){
+    if(!cmpOn[name]) continue;
+    const [eps0,dstar]=MODELS[name]; const leff=lEffFor(eps0,dstar,0.5);
+    cmpCtx.strokeStyle=cmpColor[name]; cmpCtx.lineWidth=2.4; cmpCtx.lineJoin="round"; cmpCtx.lineCap="round"; cmpCtx.beginPath();
+    for(let i=0;i<=pw;i++){ const d=i/pw*Dmax, p=pCorrect(d,eps0,GAMMA_DEFAULT,leff);
+      i?cmpCtx.lineTo(x(d),y(p)):cmpCtx.moveTo(x(d),y(p)); }
+    cmpCtx.stroke();
+    // d* marker
+    cmpCtx.fillStyle=cmpColor[name];
+    cmpCtx.beginPath();cmpCtx.arc(x(dstar),y(0.5),4,0,7);cmpCtx.fill();
+    // hover dot on this curve
+    if(cmpHoverD!=null){
+      const p=pCorrect(cmpHoverD,eps0,GAMMA_DEFAULT,leff);
+      cmpCtx.fillStyle=cmpColor[name]; cmpCtx.beginPath();cmpCtx.arc(x(cmpHoverD),y(p),4.5,0,7);cmpCtx.fill();
+      cmpCtx.strokeStyle=cssVar("--panel"); cmpCtx.lineWidth=1.5; cmpCtx.stroke();
+    }
+  }
+}
+// hover ranking tooltip on the comparison plot
+function cmpHover(ev){
+  if(!cmpGeom) return;
+  const r=cmpCv.getBoundingClientRect(), mx=ev.clientX-r.left, my=ev.clientY-r.top;
+  const {m,pw,Dmax,x,y,W} = cmpGeom;
+  if(mx<m.l||mx>m.l+pw){ cmpLeave(); return; }
+  const d=clamp((mx-m.l)/pw*Dmax, 0, Dmax);
+  cmpHoverD=d; drawCompare();
+  const rows=cmpModels.filter(n=>cmpOn[n]).map(name=>{
+    const [eps0,dstar]=MODELS[name]; const leff=lEffFor(eps0,dstar,0.5);
+    return {name, p:pCorrect(d,eps0,GAMMA_DEFAULT,leff), dstar};
+  }).sort((a,b)=>b.p-a.p);
+  if(!rows.length){ cmpLeave(); return; }
+  // nearest curve to the cursor → highlight
+  let near=rows[0], best=1e9;
+  for(const rr of rows){ const dy=Math.abs(y(rr.p)-my); if(dy<best){best=dy;near=rr;} }
+  cmpTip.innerHTML=`<div class="hd">depth d = ${d.toFixed(0)} · tool 92%</div>`+
+    rows.map(rr=>`<div class="tr${rr.name===near.name?" me":""}">`+
+      `<span class="nm"><span class="sw" style="background:${cmpColor[rr.name]}"></span>${rr.name}</span>`+
+      `<b style="color:${rr.p>=TOOL_DEFAULT-0.10?"var(--tool)":(rr.p<0.5?"var(--neural)":"var(--ink)")}">${(rr.p*100).toFixed(0)}%</b></div>`).join("");
+  cmpTip.style.opacity=1;
+  cmpTip.style.left=clamp(mx+14,0,W-200)+"px";
+  cmpTip.style.top=clamp(my-10,4,cmpGeom.H-rows.length*22-40)+"px";
+}
+function cmpLeave(){ cmpHoverD=null; cmpTip.style.opacity=0; drawCompare(); }
+cmpCv.addEventListener("pointermove", cmpHover);
+cmpCv.addEventListener("pointerleave", cmpLeave);
+// keyboard scrubber — arrows move the depth probe across every curve and
+// re-announce the ranking (cmpTip is an aria-live region) for no-mouse access.
+function cmpShowAtDepth(d){
+  if(!cmpGeom) return;
+  const {m,pw,Dmax,x,W,H}=cmpGeom;
+  cmpHoverD=clamp(d,0,Dmax); drawCompare();
+  const rows=cmpModels.filter(n=>cmpOn[n]).map(name=>{
+    const [eps0,dstar]=MODELS[name]; const leff=lEffFor(eps0,dstar,0.5);
+    return {name, p:pCorrect(cmpHoverD,eps0,GAMMA_DEFAULT,leff), dstar};
+  }).sort((a,b)=>b.p-a.p);
+  if(!rows.length){ cmpTip.style.opacity=0; return; }
+  const near=rows[0];
+  cmpTip.innerHTML=`<div class="hd">depth d = ${cmpHoverD.toFixed(0)} · tool 92%</div>`+
+    rows.map(rr=>`<div class="tr${rr.name===near.name?" me":""}">`+
+      `<span class="nm"><span class="sw" style="background:${cmpColor[rr.name]}"></span>${rr.name}</span>`+
+      `<b style="color:${rr.p>=TOOL_DEFAULT-0.10?"var(--tool)":(rr.p<0.5?"var(--neural)":"var(--ink)")}">${(rr.p*100).toFixed(0)}%</b></div>`).join("");
+  cmpTip.style.opacity=1;
+  cmpTip.style.left=clamp(x(cmpHoverD)+14,0,W-200)+"px";
+  cmpTip.style.top=clamp(m.t+8,4,H-rows.length*22-40)+"px";
+}
+cmpCv.addEventListener("keydown", ev=>{
+  if(ev.key!=="ArrowLeft"&&ev.key!=="ArrowRight"&&ev.key!=="Home"&&ev.key!=="End") return;
+  ev.preventDefault();
+  const Dmax=cmpGeom?cmpGeom.Dmax:60;
+  let d=cmpHoverD==null?Math.round(Dmax/2):cmpHoverD;
+  const step=ev.shiftKey?5:1;
+  if(ev.key==="ArrowRight") d+=step; else if(ev.key==="ArrowLeft") d-=step;
+  else if(ev.key==="Home") d=0; else if(ev.key==="End") d=Dmax;
+  cmpShowAtDepth(d);
+});
+cmpCv.addEventListener("focus", ()=>{ if(cmpHoverD==null) cmpShowAtDepth(Math.round((cmpGeom?cmpGeom.Dmax:60)/2)); });
+cmpCv.addEventListener("blur", cmpLeave);
+
+/* ===========================================================================
+ * Section 3 — Cost vs accuracy
+ * ======================================================================== */
+const costCv=el("costPlot"), costCtx=costCv.getContext("2d");
+let costGeom=null;
+const CST={ctool:1.5, cretry:2};
+function syncCost(){
+  el("ctoolv").textContent=CST.ctool.toFixed(1)+"×";
+  el("cretryv").textContent=CST.cretry+"×";
+  el("ctool").value=CST.ctool; el("cretry").value=CST.cretry;
+  el("ctool").style.setProperty("--pct",((CST.ctool-0.2)/(5-0.2)*100)+"%");
+  el("cretry").style.setProperty("--pct",((CST.cretry-1)/(5-1)*100)+"%");
+}
+el("ctool").addEventListener("input",e=>{CST.ctool=+e.target.value; syncCost(); drawCost();});
+el("cretry").addEventListener("input",e=>{CST.cretry=+e.target.value; syncCost(); drawCost();});
+
+// hover/touch probe on the cost chart — the only chart that lacked one
+const costTip=el("costTip");
+costCv.addEventListener("pointermove", ev=>{
+  if(!costGeom) return;
+  const r=costCv.getBoundingClientRect(), mx=ev.clientX-r.left;
+  const {m,pw,Dmax,ymax,y,toolC,H,W}=costGeom;
+  if(mx<m.l||mx>m.l+pw){ costTip.style.opacity=0; return; }
+  const d=Math.max(1, clamp((mx-m.l)/pw*Dmax, 0, Dmax));
+  const nc=neuralCostPerCorrect(d), ratio=nc/toolC;
+  costTip.style.opacity=1;
+  costTip.style.left=clamp(mx+12,0,W-170)+"px";
+  costTip.style.top=clamp(y(Math.min(nc,ymax))-54,4,H-66)+"px";
+  costTip.innerHTML=`depth <b>d=${d.toFixed(0)}</b><br>neural <b>${nc.toFixed(1)}×</b> · tool <b>${toolC.toFixed(1)}×</b>`+
+    `<br><span style="color:${ratio>1?'var(--neural)':'var(--tool)'}">${ratio>=1?ratio.toFixed(1)+"× costlier than tool":"tool not cheaper yet"}</span>`;
+});
+costCv.addEventListener("pointerleave", ()=>{ costTip.style.opacity=0; });
+
+// neural cost per correct ≈ (depth steps × retries) / accuracy ; tool ≈ ctool (flat), accuracy ~ tool
+function neuralCostPerCorrect(d){
+  const acc=Math.max(1e-3, pCorrect(d,S.eps0,S.gamma,S.leff));
+  const attemptCost=Math.max(1,d)*CST.cretry;     // tokens grow with depth × retries
+  return attemptCost/acc;
+}
+function toolCostPerCorrect(){ return CST.ctool/Math.max(1e-3,S.tool); }
+
+function drawCost(){
+  const DPR=window.devicePixelRatio||1, W=costCv.clientWidth||760, H=380;
+  costCv.width=W*DPR; costCv.height=H*DPR; costCv.style.height=H+"px";
+  costCtx.setTransform(DPR,0,0,DPR,0,0); costCtx.clearRect(0,0,W,H);
+  const m={l:54,r:18,t:16,b:42}, pw=W-m.l-m.r, ph=H-m.t-m.b;
+  const Dmax=50;
+  const muted=cssVar("--muted"),grid=cssVar("--grid"),neural=cssVar("--neural"),tool=cssVar("--tool"),accent=cssVar("--accent");
+  // y in log-ish: cap at a max for display
+  let ymax=0, cross=null, maxGain=0;
+  const toolC=toolCostPerCorrect();
+  for(let d=1;d<=Dmax;d++){ ymax=Math.max(ymax, neuralCostPerCorrect(d)); }
+  ymax=Math.min(ymax, toolC*30); // clamp display
+  const x=d=>m.l + d/Dmax*pw, y=c=>m.t + (1-clamp(c/ymax,0,1))*ph;
+  costGeom={m,pw,Dmax,ymax,x,y,toolC,H,W};
+
+  costCtx.strokeStyle=grid; costCtx.fillStyle=muted; costCtx.lineWidth=1; costCtx.font="11px system-ui";
+  costCtx.textAlign="center"; costCtx.textBaseline="top";
+  for(let d=0;d<=Dmax;d+=10){ const xx=x(d); costCtx.beginPath();costCtx.moveTo(xx,m.t);costCtx.lineTo(xx,H-m.b);costCtx.stroke();
+    costCtx.fillStyle=muted; costCtx.fillText(d,xx,H-m.b+6); }
+  costCtx.fillText("reasoning depth  d",m.l+pw/2,H-m.b+22);
+  costCtx.save(); costCtx.translate(14,m.t+ph/2); costCtx.rotate(-Math.PI/2);
+  costCtx.textAlign="center"; costCtx.fillText("cost / correct (rel.)",0,0); costCtx.restore();
+
+  // tool flat line
+  costCtx.strokeStyle=tool; costCtx.setLineDash([7,5]); costCtx.lineWidth=2;
+  costCtx.beginPath();costCtx.moveTo(m.l,y(toolC));costCtx.lineTo(W-m.r,y(toolC));costCtx.stroke();costCtx.setLineDash([]);
+
+  // neural curve
+  costCtx.strokeStyle=neural; costCtx.lineWidth=2.6; costCtx.lineJoin="round"; costCtx.lineCap="round"; costCtx.beginPath(); let started=false;
+  for(let i=0;i<=pw;i++){ const d=i/pw*Dmax; if(d<1) continue;
+    const c=neuralCostPerCorrect(d);
+    if(cross===null && c>=toolC){ cross=d; }
+    if(c>=toolC) maxGain=Math.max(maxGain, c/toolC);
+    const px=x(d),py=y(c);
+    started?costCtx.lineTo(px,py):(costCtx.moveTo(px,py),started=true);
+  }
+  costCtx.stroke();
+
+  // crossover marker
+  if(cross!==null){
+    costCtx.strokeStyle=accent; costCtx.setLineDash([3,3]); costCtx.lineWidth=1.6;
+    costCtx.beginPath();costCtx.moveTo(x(cross),m.t);costCtx.lineTo(x(cross),H-m.b);costCtx.stroke();costCtx.setLineDash([]);
+  }
+  el("costCross").innerHTML = cross!==null ? cross.toFixed(0)+' <small>steps</small>' : '—';
+  el("costGain").innerHTML = maxGain>0 ? maxGain.toFixed(1)+'<small>×</small>' : '—';
+}
+
+/* ===========================================================================
+ * Section 3.5 — Decomposition planner  (visualises should_delegate_batch)
+ * ======================================================================== */
+const planSel=el("planModel");
+for(const name of Object.keys(MODELS)){ const o=document.createElement("option"); o.value=name; o.textContent=name; planSel.appendChild(o); }
+planSel.value="gpt-4o";
+let planSteps=[];
+const PLAN_QUICK=[6,12,18,24,32,45];
+(function buildPlanQuick(){
+  const box=el("planQuick");
+  for(const d of PLAN_QUICK){ const b=document.createElement("button"); b.className="btn"; b.textContent="d="+d;
+    b.title=`Add a depth-${d} sub-goal`;
+    b.addEventListener("click",()=>{ planSteps.push(d); renderPlan(); }); box.appendChild(b); }
+})();
+// policy-identical routing — same source of truth as the quiz below
+function planDecide(model,depth){ return quizDelegate(model,depth); }
+function renderPlan(){
+  const model=planSel.value;
+  const list=el("planList"), bar=el("planBar");
+  list.innerHTML=""; bar.innerHTML="";
+  if(!planSteps.length){
+    list.innerHTML=`<div class="plan-empty">No sub-goals yet — add a few depths above (try the quick presets) to see how the policy routes a whole plan.</div>`;
+    el("planCounts").innerHTML="—"; el("planNeural").innerHTML="—"; el("planRouted").innerHTML="—";
+    el("planGain").style.display="none"; return;
+  }
+  let allNeural=1, routed=1, nDel=0;
+  planSteps.forEach((depth,i)=>{
+    const res=planDecide(model,depth);
+    const branchAcc=res.delegate?TOOL_DEFAULT:res.neural;
+    allNeural*=res.neural; routed*=branchAcc; if(res.delegate) nDel++;
+    const row=document.createElement("div"); row.className="sub"; row.setAttribute("role","listitem");
+    row.innerHTML=`<span class="idx">${i+1}</span>`+
+      `<span class="meta">depth <b>d=${depth}</b> · neural <b>${(res.neural*100).toFixed(0)}%</b>`+
+        `${res.delegate?` · tool <b>${(TOOL_DEFAULT*100).toFixed(0)}%</b>`:""}</span>`+
+      `<span class="route ${res.delegate?"delegate":"reason"}">${res.delegate?"🛠 delegate":"🧠 reason"}</span>`+
+      `<button class="rm" title="Remove" aria-label="Remove step ${i+1}">×</button>`;
+    row.querySelector(".rm").addEventListener("click",()=>{ planSteps.splice(i,1); renderPlan(); });
+    list.appendChild(row);
+    const cell=document.createElement("div"); cell.className="seg-cell";
+    cell.style.flexGrow=Math.max(1,depth); cell.style.background=res.delegate?cssVar("--neural"):cssVar("--tool");
+    cell.textContent=depth>=6?("d"+depth):""; cell.title=`step ${i+1}: d=${depth} → ${res.delegate?"delegate":"reason"}`;
+    bar.appendChild(cell);
+  });
+  el("planCounts").innerHTML=`${planSteps.length} <small>· ${nDel} deleg.</small>`;
+  el("planNeural").innerHTML=(allNeural*100).toFixed(allNeural<0.1?1:0)+'<small>%</small>';
+  el("planRouted").innerHTML=(routed*100).toFixed(0)+'<small>%</small>';
+  const gain=el("planGain");
+  if(routed>allNeural+1e-9){
+    const mult=allNeural>1e-6?(routed/allNeural):Infinity;
+    gain.style.display="block";
+    gain.innerHTML=`Routing with the policy lifts end-to-end success from <b>${(allNeural*100).toFixed(allNeural<0.1?1:0)}%</b> to `+
+      `<b>${(routed*100).toFixed(0)}%</b>`+(isFinite(mult)&&mult>=1.5?` — a <b>${mult.toFixed(mult<10?1:0)}×</b> improvement`:"")+
+      `, by delegating the ${nDel} step${nDel===1?"":"s"} past ${model}'s horizon (d*=${(MODELS[model]||MODELS.default)[1]}).`;
+  } else { gain.style.display="none"; }
+}
+el("planAdd").addEventListener("click",()=>{ const d=clamp(parseInt(el("planDepth").value,10)||0,0,200); planSteps.push(d); renderPlan(); });
+el("planDepth").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); el("planAdd").click(); }});
+el("planClear").addEventListener("click",()=>{ planSteps=[]; renderPlan(); });
+planSel.addEventListener("change",renderPlan);
+el("planCopyBtn").addEventListener("click",async()=>{
+  const model=planSel.value;
+  if(!planSteps.length){ toast("Add a few steps first"); return; }
+  const py=`from deterministic_horizon import should_delegate_batch\n`+
+    `depths = [${planSteps.join(", ")}]\n`+
+    `should_delegate_batch(depths, model="${model}")  # → [${planSteps.map(d=>planDecide(model,d).delegate?"True":"False").join(", ")}]`;
+  const ok=await copyText(py); if(ok) flashCopied(el("planCopyBtn"),"✓ Copied"); else toast("Copy failed");
+});
+
+/* ===========================================================================
+ * Section 4 — Two theories
+ * ======================================================================== */
+const THEORY=[
+  {pred:"Fine-tune recovery", sb:">30%", dc:"<5%", obs:3.2, max:35, fmt:v=>v+"%", side:"dc"},
+  {pred:"Length-prompt gain", sb:">10%", dc:"<2%", obs:0.9, max:12, fmt:v=>v+"%", side:"dc"},
+  {pred:"Cross-model corr. r", sb:"low", dc:"high", obs:0.85, max:1, fmt:v=>v.toFixed(2), side:"dc"},
+  {pred:"Enc-dec advantage", sb:"none", dc:"2–3×", obs:2.8, max:3.2, fmt:v=>v.toFixed(1)+"×", side:"dc"},
+];
+(function buildTheory(){
+  const tb=el("theoryBody");
+  for(const t of THEORY){
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><b>${t.pred}</b></td>
+      <td class="num" style="color:var(--muted)">${t.sb}</td>
+      <td class="num" style="color:var(--ink)"><b>${t.dc}</b></td>
+      <td><div><span class="check">✓</span> ${t.fmt(t.obs)}</div>
+          <div class="bar"><span data-w="${(t.obs/t.max*100).toFixed(0)}" style="width:0;background:linear-gradient(92deg,var(--accent),var(--accent-2))"></span></div></td>`;
+    tb.appendChild(tr);
+  }
+})();
+function animateTheoryBars(){
+  document.querySelectorAll("#theoryBody .bar > span").forEach(s=>{
+    const w=s.getAttribute("data-w")+"%";
+    if(PREFERS_REDUCED){ s.style.width=w; } else { requestAnimationFrame(()=>{ s.style.width=w; }); }
+  });
+}
+const theoryObs=new IntersectionObserver((entries)=>{
+  for(const e of entries){ if(e.isIntersecting){ animateTheoryBars(); theoryObs.disconnect(); } }
+},{threshold:.3});
+theoryObs.observe(el("theories"));
+
+/* ===========================================================================
+ * Section 5 — Quiz
+ * ======================================================================== */
+const QUIZ=[
+  {model:"gpt-4o", depth:8},
+  {model:"gpt-4o", depth:35},
+  {model:"o3-mini", depth:28},
+  {model:"claude-4.5-opus", depth:18},
+  {model:"qwen-2.5-7b", depth:24},
+  {model:"deepseek-r1", depth:40},
+  {model:"o3-mini", depth:33},
+  {model:"llama-3.1-8b", depth:12},
+];
+let quizIdx=-1, quizScore=0, quizCount=0, quizAnswered=false, quizStreak=0, quizBest=0;
+function quizDelegate(model,depth){
+  const [eps0,dstar]=MODELS[model]||MODELS.default;
+  const leff=lEffFor(eps0,dstar,0.5);
+  const neural=pCorrect(depth,eps0,GAMMA_DEFAULT,leff);
+  if(neural<0.5) return {delegate:true,reason:"above_horizon",neural,dstar};
+  if(TOOL_DEFAULT-neural>0.10) return {delegate:true,reason:"tool_dominates_by_margin",neural,dstar};
+  return {delegate:false,reason:"below_horizon",neural,dstar};
+}
+function loadQuiz(){
+  let next=quizIdx;                       // randomise, never repeat the same scenario twice
+  if(QUIZ.length>1){ while(next===quizIdx) next=Math.floor(Math.random()*QUIZ.length); }
+  else { next=0; }
+  quizIdx=next; quizAnswered=false;
+  const q=QUIZ[quizIdx];
+  el("quizQ").textContent=`Your planner estimates the next subproblem is ${q.depth} deterministic state-tracking steps deep.`;
+  el("quizMeta").innerHTML=`Model in the loop: <b>${q.model}</b> (horizon d* = ${(MODELS[q.model]||MODELS.default)[1]}). Keep reasoning, or delegate?`;
+  el("quizFb").className="quiz-feedback";
+  for(const id of ["optReason","optDelegate"]){ const b=el(id); b.disabled=false; b.className="opt"; }
+}
+function answerQuiz(choice){
+  if(quizAnswered) return; quizAnswered=true; quizCount++;
+  const q=QUIZ[quizIdx]; const res=quizDelegate(q.model,q.depth);
+  const correctChoice = res.delegate ? "delegate" : "reason";
+  const right = choice===correctChoice;
+  if(right){ quizScore++; quizStreak++; quizBest=Math.max(quizBest,quizStreak); } else { quizStreak=0; }
+  el("quizStreak").textContent=`🔥 Streak ${quizStreak} · best ${quizBest}`;
+  el("optReason").disabled=true; el("optDelegate").disabled=true;
+  el(correctChoice==="reason"?"optReason":"optDelegate").classList.add("correct");
+  if(!right) el(choice==="reason"?"optReason":"optDelegate").classList.add("wrong");
+  const fb=el("quizFb"); fb.classList.add("show");
+  const reasonText={
+    above_horizon:"past the horizon — neural accuracy is below 50%, so thinking harder is a coin flip.",
+    tool_dominates_by_margin:"still below d*, but the tool beats neural by &gt;10 points — don't burn tokens to break even.",
+    below_horizon:"comfortably below the horizon — extended reasoning is reliable and cheaper than a tool call.",
+  }[res.reason];
+  fb.innerHTML=`<b>${right?"✓ Correct":"✗ Not quite"}.</b> At d=${q.depth}, ${q.model} reaches `+
+    `<b>${(res.neural*100).toFixed(0)}%</b> via CoT vs. 92% via tools — the policy says `+
+    `<b>${res.delegate?"delegate":"keep reasoning"}</b> because it's ${reasonText}`;
+  el("quizScore").textContent=`Score: ${quizScore} / ${quizCount}`;
+}
+el("optReason").addEventListener("click",()=>answerQuiz("reason"));
+el("optDelegate").addEventListener("click",()=>answerQuiz("delegate"));
+el("quizNext").addEventListener("click",loadQuiz);
+// keyboard play — only when the quiz is in view and focus isn't in a field
+document.addEventListener("keydown",e=>{
+  if(/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName||"")) return;
+  const r=el("quiz").getBoundingClientRect();
+  if(r.bottom<0||r.top>innerHeight) return;
+  const k=e.key.toLowerCase();
+  if(k==="1"||k==="r"){ e.preventDefault(); answerQuiz("reason"); }
+  else if(k==="2"||k==="d"){ e.preventDefault(); answerQuiz("delegate"); }
+  else if(k==="n"||k==="enter"){ e.preventDefault(); loadQuiz(); }
+});
+
+/* ===========================================================================
+ * Init
+ * ======================================================================== */
+(function init(){
+  try{
+    const t=localStorage.getItem("dh-theme");
+    if(t){ document.body.dataset.theme=t; }
+    else if(matchMedia("(prefers-color-scheme: light)").matches){ document.body.dataset.theme="light"; }
+  }catch(_){}
+  for(const k of Object.keys(sliders)) syncSlider(k);
+  const fromHash = loadHash();
+  if(!fromHash){ presetSel.value="gpt-4o"; applyPreset("gpt-4o", false); }
+  syncCost();
+  planSteps=[5, 8, 18, 32];            // illustrative default (gpt-4o): two reason, two delegate
+  render(); drawCompare(); drawCost(); renderPlan(); loadQuiz();
+  if(fromHash) updateHash();
+})();
+window.addEventListener("resize",()=>{ render(); drawCompare(); drawCost(); });
+window.addEventListener("hashchange",()=>{ if(loadHash()) render(); });
 </script>
 </body>
 </html>
