@@ -90,6 +90,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (Thm 1 → Thm 4.2).
 
 ### Fixed
+- **Hero text was scrambled into a broken 4-column grid** — the hero subtitle
+  paragraph and the decomposition-planner step rows both used the class `.sub`,
+  and the later `display:grid; grid-template-columns:auto 1fr auto auto` rule
+  won, shredding the intro sentence across mismatched columns. Renamed the hero
+  paragraph to `.hero-sub` so the planner keeps its grid and the hero flows as
+  normal prose again.
 - **Explorer "Copy Python" produced non-runnable code in custom mode** — it
   emitted `should_delegate(estimated_depth=…, eps0=…, l_eff=…)`, but
   `should_delegate` takes a `model`, not raw decoherence params, so the pasted
