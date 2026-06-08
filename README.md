@@ -15,57 +15,6 @@
 
 ---
 
-## The 30-second pitch
-
-We tested **12 frontier models** on **deterministic state-space search** — the kind of problem BFS solves in milliseconds. They all hit the same wall, at the same place:
-
-| Model | Neural CoT (C1) | **Tool delegation (C3)** | Horizon *d*\* |
-|---|---:|---:|---:|
-| GPT-4o            | 28% | **90%** | 22 |
-| Claude-4.5-Opus   | 35% | **94%** | 27 |
-| o3-mini           | 42% | **94%** | 31 |
-| DeepSeek-R1       | 40% | **93%** | 29 |
-
-<sub>PermutationProbe, neural CoT vs. tool-integrated reasoning (paper Table&nbsp;3).</sub>
-
-The wall sits at **d\* ∈ [19, 31] reasoning steps**. We give it a name (the **Deterministic Horizon**), derive it from the information-theoretic capacity of attention (Theorem&nbsp;4.2), and prove that **fine-tuning cannot push past it** (Theorem&nbsp;4.7).
-
-<div align="center">
-<img src="assets/figure_model_horizons.png" alt="Per-model neural CoT decay curves; each model's horizon d* falls between 19 and 31 steps, and every curve drops below the 92% tool baseline past its horizon." width="720"/>
-<br/>
-<sub><b>Same wall, different distances.</b> Lower baseline error and longer effective decoherence length push the horizon out — but every model crosses below the tool baseline. Regenerate with <code>dh compare-figure</code>; explore it live in the <a href="https://bettyguo.github.io/deterministic-horizon/#compare">interactive comparison</a>.</sub>
-</div>
-
-> **Why care?** Every agentic system shipping today — code agents, browser agents, planners — must decide *when to think* and *when to call a tool*. Past d\*, "think harder" is a coin flip. Hand off.
-
----
-
-## Five lines that ship to your agent today
-
-```python
-from deterministic_horizon import should_delegate
-
-# In your planner loop:
-if should_delegate(estimated_depth=subproblem_depth, model="claude-4.5-opus"):
-    answer = call_tool(subproblem)        # BFS / search / SQL / verifier
-else:
-    answer = call_llm(subproblem)         # neural chain-of-thought
-```
-
-Need the full justification (for logging or eval)?
-
-```python
->>> from deterministic_horizon import delegation_decision
->>> d = delegation_decision(estimated_depth=30, model="claude-4.5-opus")
->>> d.explain()
-"At estimated depth d=30, model 'claude-4.5-opus' is expected to reach 45% via CoT
- vs. 92% via tools (horizon d*=27). → delegate."
-```
-
-The decision is the paper's Theorem&nbsp;4.2 decay model, `ε(d) = ε₀ + γ·d/L_eff`, evaluated per model. Per-model horizons, when this *doesn't* apply, and three production routing patterns: **[docs/when-to-delegate.md](docs/when-to-delegate.md)**.
-
----
-
 ## Headline findings
 
 | Metric | Value | Why it matters |
