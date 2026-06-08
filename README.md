@@ -23,7 +23,7 @@
 | Tool-integrated accuracy | **86–94%** | Across 8 task domains and 12 models. |
 | Neural CoT accuracy | **24–42%** | The same tasks, no tools. |
 | Cross-model correlation $r$ | **0.81–0.91** | Models from 6 orgs fail on the *same* instances ⇒ architectural, not training-specific. |
-| Fine-tuning recovery | **+3.2%** | Theorem 4.7 predicts < 5%; the competing theory predicts > 30%. |
+| Fine-tuning recovery | **+3.2%** | Theorem 4.10 predicts < 5%; the competing theory predicts > 30%. |
 | Cost efficiency (tool vs. CoT) | **4.2–4.7×** | Lower cost-per-correct-solution. |
 | Decoherence-model fit | **R² = 0.96** | Super-exponential decay beats linear (0.71) and exponential (0.83). |
 
@@ -41,7 +41,7 @@ from deterministic_horizon import (
 
 # 1. Generate BFS-optimal-depth instances (depth == true BFS optimum)
 task = PermutationTask(n_elements=8, seed=42)          # S_8, diameter C(8,2)=28
-instances = task.generate_instances(n_instances=400, min_depth=4, max_depth=28)
+instances = task.generate_instances(n_instances=500, min_depth=5, max_depth=28)
 
 # 2. Evaluate a model (needs an API key in .env)
 results = evaluate(model="gpt-4o", instances=instances, conditions=["C1", "C3"])
@@ -77,7 +77,7 @@ horizon_table()                                       # → per-model d* / ε₀
 deterministic-horizon/
 ├── src/
 │   ├── policy.py        # should_delegate / delegation_decision  ← the engineering hook
-│   ├── tasks/           # PermutationProbe, FSA-Sim, ArithChain (+ BFS oracle)
+│   ├── tasks/           # PermutationProbe, FSA-Sim, ArithChain, CircuitTrace, CodeProbe (+ BFS oracle)
 │   ├── models/          # Uniform interface: OpenAI / Anthropic / DeepSeek / Gemini / Together / local
 │   ├── metrics/         # SSJ, SFE, super-exponential horizon fit, bootstrap CIs
 │   ├── analysis.py      # Figures + tables (+ plot_model_horizons comparison)
