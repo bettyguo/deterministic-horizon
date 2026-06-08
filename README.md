@@ -1,14 +1,8 @@
-<p align="right">
-  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a>
-</p>
-
 <div align="center">
 
 # 🧭 The Deterministic Horizon
 
 ### When extended chain-of-thought stops helping — and tool delegation becomes *necessary*
-
-*Official code for the Deterministic Horizon paper.*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue.svg)](https://www.python.org/downloads/)
