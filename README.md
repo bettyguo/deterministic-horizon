@@ -13,10 +13,6 @@
 
 <br/>
 
-<img src="assets/figure_decay.png" alt="Neural chain-of-thought accuracy decays super-exponentially with reasoning depth and crosses 50% at the Deterministic Horizon d*≈22, while tool-integrated reasoning stays flat near the top." width="760"/>
-
-<sub><b>The wall has a name.</b> Neural CoT accuracy follows the super-exponential decay of Theorem&nbsp;4.2 and crosses 50% at the <b>Deterministic Horizon</b> <i>d</i>*. Tool delegation (C3) ignores the wall. <i>This is the offline <b>synthetic</b> reproduction (regenerated live from <a href="results/sample/synthetic_results.json"><code>results/sample/</code></a> — no API keys); it mirrors the paper's Fig.&nbsp;1 on real GPT-4o, whose measured numbers (d*&nbsp;=&nbsp;22, tool&nbsp;≈&nbsp;90%) appear in the table below.</i></sub>
-
 </div>
 
 ---
@@ -166,39 +162,4 @@ deterministic-horizon/
 ├── configs/             # OmegaConf configs (model × task × experiment)
 └── tests/               # pytest suite (smoke · metrics · tasks · policy · analysis)
 ```
-
----
-
-## Installation
-
-```bash
-pip install -e .                      # slim: core metrics + analysis, no LLM clients
-pip install -e ".[openai,anthropic]"  # + API clients
-pip install -e ".[local]"             # + PyTorch / transformers / peft (open-weight + C5)
-pip install -e ".[all,dev]"           # everything + test/lint tooling
-```
-
-Requires Python 3.10–3.13. CI runs the suite on Linux, macOS, and Windows.
-
----
-
-## Contributing
-
-Bug reports, new tasks, and extensions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md); issue templates and a PR checklist are wired up under [`.github/`](.github/). Research directions (help wanted):
-
-- [ ] SWE-Bench-State / WebArena-Nav / SQL-Multi adapters
-- [x] Gemini and Together adapters — OpenAI-compatible, in [`src/models/`](src/models/)
-- [ ] Mamba / RWKV / MoE decoherence study
-- [x] Interactive horizon visualiser — [live explorer](https://bettyguo.github.io/deterministic-horizon/) ([source](docs/index.html)) with model comparison, cost analysis, an agent decomposition planner, and a delegation quiz
-
----
-
-<div align="center">
-
-**The Deterministic Horizon isn't a soft suggestion — it's a wall.**
-If your next subproblem is ≳ 20 deterministic state-tracking steps, delegate.
-
-[Docs](docs/README.md) · [When to delegate](docs/when-to-delegate.md) · [Interactive explorer](https://bettyguo.github.io/deterministic-horizon/) · [Quickstart notebook](notebooks/01_quickstart.ipynb) · [Issues](https://github.com/bettyguo/deterministic-horizon/issues)
-
-</div>
 
