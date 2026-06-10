@@ -257,8 +257,30 @@ def train(
     output_dir: Path = typer.Option("checkpoints/", help="Output directory"),
 ) -> None:
     """Fine-tune a model on optimal-length traces (C5 condition)."""
-    console.print("[bold blue]Fine-tuning not yet implemented in CLI[/]")
-    console.print("Use the Python API: deterministic_horizon.training.finetune()")
+    from deterministic_horizon.training.finetune import FinetuneConfig, run_finetuning
+
+    console.print("[bold blue]Starting fine-tuning...[/]")
+
+    if not config.exists():
+        console.print(f"[red]Config file not found: {config}[/]")
+        raise typer.Exit(1)
+
+    # Load config from YAML if available, otherwise use defaults
+    try:
+        import yaml
+        with open(config) as f:
+            cfg_dict = yaml.safe_load(f) or {}
+        cfg_dict["output_dir"] = str(output_dir)
+        finetune_cfg = FinetuneConfig(**{k: v for k, v in cfg_dict.items() if k in FinetuneConfig.__dataclass_fields__})
+    except ImportError:
+        console.print("[yellow]PyYAML not installed, using default config[/]")
+        finetune_cfg = FinetuneConfig(output_dir=str(output_dir))
+    except Exception as e:
+        console.print(f"[yellow]Failed to load config ({e}), using defaults[/]")
+        finetune_cfg = FinetuneConfig(output_dir=str(output_dir))
+
+    results = run_finetuning(finetune_cfg)
+    console.print(f"[green]Fine-tuning complete. Results: {results.get('status', 'unknown')}[/]")
 
 
 @app.command()
